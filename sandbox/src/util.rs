@@ -5,22 +5,26 @@ use gemini::request::{Gemini, GeminiRequest, InvalidRequest, Request};
 use regex::Regex;
 use std::borrow::Cow;
 
+#[allow(dead_code)]
 fn uri_converter<'a>(uri: &'a String, re: &str, proto: &'a str) -> Cow<'a, str> {
     let re = Regex::new(re).unwrap();
     let newuri = re.replace(uri, format!("{proto}://"));
     newuri
 }
 
+#[allow(dead_code)]
 pub fn to_gemini_uri(http_uri: &String) -> String {
     let gemurl = uri_converter(http_uri, r"http(s)?://", "gemini");
     gemurl.into_owned()
 }
 
+#[allow(dead_code)]
 pub fn to_http_uri(gem_uri: &String) -> String {
     let httpurl = uri_converter(gem_uri, r"gemini://", "http");
     httpurl.into_owned()
 }
 
+#[allow(dead_code)]
 /// Tries to create a Gemini request from the supplied string
 pub fn client(uri: &str) -> Result<GeminiRequest, InvalidRequest> {
     let req = Request::<Gemini>::from_uri(uri).expect("Could not get a Gemini request!");

@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 use std::env;
 
 fn stmt(s: String, p: String, o: String) -> Statement {
-    let triple = Statement::new(s, p, o, None, None);
+    let triple = Statement::new(s, p, o);
     triple
 }
 
@@ -27,7 +27,7 @@ fn _print_type_of<T>(_: &T) {
 fn help(progname: &String, valid: &Vec<String>) {
     println!("Usage: {} <task>", progname);
     println!("<task> can be one of:");
-    for (index, arg) in valid.iter().enumerate() {
+    for (_index, arg) in valid.iter().enumerate() {
       println!(" - {}", arg);
     }
 }

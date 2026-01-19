@@ -121,14 +121,12 @@ async fn handle_connection(
     // If user requests gemini://host/http%3A%2F%2F...\n    // The path part is /http...\n    
     // We need to strip the gemini prefix first to see the path.
     let path = if let Some(p) = clean_url.strip_prefix("gemini://") {
-        // p is host/path.
-        // Strip host (naive lookup for localhost/127.0.0.1)
-        if let Some(rest) = p.strip_prefix("localhost") {
-            rest
-        } else if let Some(rest) = p.strip_prefix("127.0.0.1") {
-            rest
+        // p is host[:port]/path
+        if let Some(slash_pos) = p.find('/') {
+            &p[slash_pos..]
         } else {
-            p
+            // It was just gemini://host[:port]
+            "/"
         }
     } else {
         &clean_url

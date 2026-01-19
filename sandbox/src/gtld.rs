@@ -21,8 +21,6 @@ impl Statement {
         s: String,
         p: String,
         o: String,
-        s_label: Option<String>,
-        o_label: Option<String>,
     ) -> Statement {
         Statement {
             subject: s,
@@ -72,8 +70,6 @@ fn test_gemtext_object_property_assertion() {
         format!("{NS_WIKIDATA}Q2026413"),
         format!("{NS_RDF}type"),
         format!("{NS_FRBR}Work"),
-        None,
-        None,
     );
     let mut rdf = Document::new();
     rdf.add(stmt.clone());
