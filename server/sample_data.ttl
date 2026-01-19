@@ -1,0 +1,16 @@
+@prefix : <gemini://localhost/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix schema: <http://schema.org/> .
+
+:me a foaf:Person ;
+    foaf:name "Adamou" ;
+    foaf:homepage <gemini://localhost/about> ;
+    schema:knows :alice .
+
+:alice a foaf:Person ;
+    foaf:name "Alice" ;
+    schema:jobTitle "Rustacean" .
+
+:about a schema:WebPage ;
+    schema:description "About Page" ;
+    schema:author :me .

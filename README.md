@@ -1,14 +1,80 @@
-# LDOG - Linked.Data.Over.Gemini
+# Chaykin: Linked Data over the Small Web
 
-This project has a twofold goal:
+A Linked Data server in Rust that makes Linked Data from the Semantic Web available over the Small Web (or "smolweb") through the [Gemini protocol](https://geminiprotocol.net/).
 
-1. To explore the potential for the [Gemini](https://gemini.circumlunar.space/) "small web" protocol to publish and manage [Linked Data](https://www.w3.org/wiki/LinkedData).
-2. For me to start studying the Rust language :)
+## Synopsis
 
-Particularly, I want to explore:
+Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptography support. It is intended to live alongside HTTP, but also Gopher and other, more recent application protocols that share the same philosophy of a functional Web that doesn't require bloatware clients to run.
 
-* A convenient way of rendering Linked Data as Gemtext, or annotationg any Gemtext as you would RDFa or Microdata.
-* Using `gemini://` URIs for identifying things, and their relation to `http://` URI.
-* Bridging between the two protocols: should dereferencing `gemini://` deliver RDF formatted using `gemini://` URIs or make the leap to `http://`?
-* Gemini protocol bindings for Linked Data platforms, knowing there are no POST, PUT etc. request types and implementing a REST interface can be a daunting task.
+### Why Chaykin?
 
+Lester Chaykin is a fictional particle physicist and the protagonist of Eric Chahi's video game classic _Another World_ (_Out of This World_ for my American friends). Much like Dr. Chaykin is transported out of this world and into another, so does this project attempt to bring Linked Data out of the cluttered HTTP-based Web into the dimension of the Small Web.
+
+Another World was also known for its fascinating aesthetics based upon an essential 3D engine that used non-textured polygons, not unlike the minimalistic Gemini protocol hosting the beauty and complexity of Linked Data and knowledge graphs.
+
+## Features
+- **Gemini Server**: Custom Tokio+Rustls implementation.
+- **Linked Data Store**: Consumes RDF data in Turtle via `rio_turtle` and holds them into an in-memory store.
+- **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.
+- **External Proxy**: Acts as a browser for all the Linked Open Data out there.
+    - Encoded URLs in the request path are fetched via `reqwest`.
+    - `Accept: text/turtle` is used for Content Negotiation.
+    - Fetched RDF is parsed and rendered.
+    - Links to other external resources are re-encoded to point back to the proxy.
+
+## Setup & Running
+Pretty standard stuff:
+1. **Dependencies**: `tokio`, `rustls`, `rcgen`, `rio_turtle`, `rio_api`, `reqwest`, `percent-encoding`.
+2. **Build**:
+   ```bash
+   cd server
+   cargo build
+   ```
+3. **Run**:
+   Either launch the `chaykin` executable in `server/target`, or
+   ```bash
+   cargo run
+   ```
+   The server listens on `127.0.0.1:1965`. I'll make that configurable, eventually.
+
+## Usage & Verification
+### 1. Local Resource
+```bash
+printf "gemini://localhost/me\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
+```
+Returns data about yours truly (from [sample_data.ttl](/server/sample_data.ttl)).
+
+### 2. External Resource (Proxy)
+Browse the Palazzo Colonna data from an Art History knowledge graph:
+```bash
+# Encoded URL: https://data.biblhertz.it/builtwork/zuccaro/406
+printf "gemini://localhost/https%%3A%%2F%%2Fdata.biblhertz.it%%2Fbuiltwork%%2Fzuccaro%%2F406\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
+```
+(Note: `%%` is for printf escaping in bash).
+
+**Output:**
+```text
+20 text/gemini
+# Proxy: https://data.biblhertz.it/builtwork/zuccaro/406
+
+=> gemini://localhost/http%3A%2F%2Fwww%2Ecidoc%2Dcrm%2Eorg%2Fcidoc%2Dcrm%2FE18%5FPhysical%5FThing ...
+* http://www.w3.org/2000/01/rdf-schema#label: Simple { value: "Palazzo Colonna" }
+...
+```
+If you got this, then the server successfully:
+1.  Decoded the URL.
+2.  Fetched the Turtle data from `data.biblhertz.it`.
+3.  Parsed the triples.
+4.  Found the subject (handling http/https mismatch automatically).
+5.  generated links pointing back to `gemini://localhost/...`.
+
+## TODO
+Lots and lots, but mainly:
+- Move to RDF support via Sophia and access existing triple stores.
+- Better TLS support: right now it is only supported via self-signed certificates.
+- SPARQL API? Only if it can respect the basic principles of the Small Web.
+- Support the Titan protocol if we need to have something like HTTP POST (which we would if SPARQL were to be implemented).
+- Full specification of the Gemtext RDF serialization.
+- Make the server configurable.
+
+## RightsThis is free software; see [LICENSE](LICENSE).
