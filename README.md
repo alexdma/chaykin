@@ -8,9 +8,11 @@ Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptog
 
 ### Why Chaykin?
 
-Lester Chaykin is a fictional particle physicist and the protagonist of Eric Chahi's video game classic _Another World_ (_Out of This World_ for my American friends). Much like Dr. Chaykin is transported out of this world and into another, so does this project attempt to bring Linked Data out of the cluttered HTTP-based Web into the dimension of the Small Web.
+Lester Chaykin is a fictional particle physicist and the protagonist of Eric Chahi's classic video game _Another World_ (_Out of This World_ for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
 
-Another World was also known for its fascinating aesthetics based upon an essential 3D engine that used non-textured polygons, not unlike the minimalistic Gemini protocol hosting the beauty and complexity of Linked Data and knowledge graphs.
+Another World was also fascinating through its many ways of being minimalistic: in the aesthetics (using cinematic animation on top of a bare-polygon 3D engine), interaction (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
+
+Finally, Another World was first released on the Amiga computer, and there are Gemini browsers running on AmigaOS for you to explore Linked Data with.
 
 ## Features
 - **Gemini Server**: Custom Tokio+Rustls implementation.
