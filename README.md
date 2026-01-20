@@ -10,9 +10,9 @@ Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptog
 
 [Lester Chaykin](https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin) is a fictional particle physicist and the protagonist of Eric Chahi's classic video game [Another World](http://www.wikidata.org/entity/Q257469) ("Out of This World" for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
 
-Another World was also fascinating through its many ways of being minimalistic: in the aesthetics (using cinematic animation on top of a bare-polygon 3D engine), interaction (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
+Another World was also fascinating through its many ways of being minimalistic: in the aesthetic (using cinematic animation on top of a bare-polygon 3D engine), interface (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
 
-Finally, Another World was first released on the Amiga computer, and there are Gemini browsers running on AmigaOS for you to explore Linked Data with.
+Finally, Another World was first released on the Amiga computer, and there are Gemini browsers running on AmigaOS with which you can now explore Linked Data too (running this _Rust server_ on the Amiga might be trickier though).
 
 ## Features
 - **Gemini Server**: Custom Tokio+Rustls implementation.
@@ -52,12 +52,12 @@ See [Another World on Wikidata](http://www.wikidata.org/entity/Q257469):
 # Encoded URL: http://www.wikidata.org/entity/Q257469
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
-(Note: you will need `%%` for printf escaping in bash).
+(Note: you will need to replace every `%` with `%%` for printf escaping in bash).
 
 **Output:**
 ```text
 20 text/gemini
-# Proxy: http://www.wikidata.org/prop/direct/P1476
+# Proxy: http://www.wikidata.org/entity/Q257469
 ...
 => gemini://localhost/http%3A%2F%2Fdata%2Ebnf%2Efr%2Fark%3A%2F12148%2Fcb169157795%23about http://www.wikidata.org/prop/direct-normalized/P268 : http://data.bnf.fr/ark:/12148/cb169157795#about 
 ...
@@ -66,7 +66,7 @@ printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n"
 ```
 If you got this, then the server successfully:
 1.  Decoded the URL.
-2.  Fetched the Turtle data from `data.biblhertz.it`.
+2.  Fetched the Turtle data from `www.wikidata.org`.
 3.  Parsed the triples.
 4.  Found the subject (handling http/https mismatch automatically).
 5.  generated links pointing back to `gemini://localhost/...`.
@@ -77,7 +77,7 @@ Lots and lots, but mainly:
 - Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
 - Better TLS support: right now it is only supported via self-signed certificates.
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
-- Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented).
+- Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented). Could also be useful if we want a form-like frontend for the user to enter a custom Linked Data URI.
 - Full specification of the Gemtext RDF serialization (with support for labels!).
 - Make the server configurable.
 - This documentation in gemtext :)
