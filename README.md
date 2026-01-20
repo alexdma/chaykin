@@ -77,4 +77,5 @@ Lots and lots, but mainly:
 - Full specification of the Gemtext RDF serialization.
 - Make the server configurable.
 
-## RightsThis is free software; see [LICENSE](LICENSE).
+## Rights
+This is free software; see [LICENSE](LICENSE).
