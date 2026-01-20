@@ -10,6 +10,8 @@ use anyhow::{Result, Context}; // Error handling with context
 const SAMPLE_DATA_PATH: &str = "sample_data.ttl";
 const IP: &str = "127.0.0.1";
 const PORT: u16 = 1965;
+const USER_AGENT: &str = "Chaykin-Gemini-Proxy/0.1.0 (+https://github.com/alexdma/ldog)";
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,6 +26,14 @@ async fn main() -> Result<()> {
     println!("Loaded {} triples.", store.triple_count());
     let store = Arc::new(store);
 
+    // Create a shared HTTP client for proxying
+    let http_client = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .context("Failed to create HTTP client")?;
+    let http_client = Arc::new(http_client);
+
+
     // Create and bind TLS server
     let (listener, acceptor) = create_tls_server(IP, PORT).await?;
 
@@ -31,12 +41,14 @@ async fn main() -> Result<()> {
         let (stream, peer_addr) = listener.accept().await?;
         let acceptor = acceptor.clone();
         let store = store.clone();
+        let http_client = http_client.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, acceptor, peer_addr, store).await {
+            if let Err(e) = handle_connection(stream, acceptor, peer_addr, store, http_client).await {
                 eprintln!("Error handling connection from {}: {:?}", peer_addr, e);
             }
         });
+
     }
 }
 
@@ -88,6 +100,7 @@ async fn handle_connection(
     acceptor: TlsAcceptor,
     peer_addr: SocketAddr,
     store: Arc<Store>,
+    http_client: Arc<reqwest::Client>,
 ) -> Result<()> {
     let mut stream = acceptor.accept(stream).await?;
     println!("Accepted TLS connection from {}", peer_addr);
@@ -139,8 +152,7 @@ async fn handle_connection(
     if path.starts_with("http://") || path.starts_with("https://") {
         println!("Proxying request to: {}", path);
         
-        let client = reqwest::Client::new();
-        let resp = client.get(path)
+        let resp = http_client.get(path)
             .header("Accept", "text/turtle, application/x-turtle") 
             .send()
             .await;

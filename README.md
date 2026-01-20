@@ -8,7 +8,7 @@ Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptog
 
 ### Why Chaykin?
 
-[Lester Chaykin](https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin) is a fictional particle physicist and the protagonist of Eric Chahi's classic video game _Another World_ (_Out of This World_ for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
+[Lester Chaykin](https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin) is a fictional particle physicist and the protagonist of Eric Chahi's classic video game [Another World](http://www.wikidata.org/entity/Q257469) ("Out of This World" for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
 
 Another World was also fascinating through its many ways of being minimalistic: in the aesthetics (using cinematic animation on top of a bare-polygon 3D engine), interaction (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
 
@@ -47,20 +47,21 @@ printf "gemini://localhost/me\r\n" | openssl s_client -connect 127.0.0.1:1965 -q
 Returns data about yours truly (from [sample_data.ttl](/server/sample_data.ttl)).
 
 ### 2. External Resource (Proxy)
-Browse the Palazzo Colonna data from an Art History knowledge graph:
+See [Another World on Wikidata](http://www.wikidata.org/entity/Q257469):
 ```bash
-# Encoded URL: https://data.biblhertz.it/builtwork/zuccaro/406
-printf "gemini://localhost/https%%3A%%2F%%2Fdata.biblhertz.it%%2Fbuiltwork%%2Fzuccaro%%2F406\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
+# Encoded URL: http://www.wikidata.org/entity/Q257469
+printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 (Note: `%%` is for printf escaping in bash).
 
 **Output:**
 ```text
 20 text/gemini
-# Proxy: https://data.biblhertz.it/builtwork/zuccaro/406
-
-=> gemini://localhost/http%3A%2F%2Fwww%2Ecidoc%2Dcrm%2Eorg%2Fcidoc%2Dcrm%2FE18%5FPhysical%5FThing ...
-* http://www.w3.org/2000/01/rdf-schema#label: Simple { value: "Palazzo Colonna" }
+# Proxy: http://www.wikidata.org/prop/direct/P1476
+...
+=> gemini://localhost/http%3A%2F%2Fdata%2Ebnf%2Efr%2Fark%3A%2F12148%2Fcb169157795%23about http://www.wikidata.org/prop/direct-normalized/P268 : http://data.bnf.fr/ark:/12148/cb169157795#about 
+...
+* http://www.wikidata.org/prop/direct/P1476: LanguageTaggedString { value: "Out of This World", language: "en" }
 ...
 ```
 If you got this, then the server successfully:
