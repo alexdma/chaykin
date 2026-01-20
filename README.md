@@ -52,7 +52,7 @@ See [Another World on Wikidata](http://www.wikidata.org/entity/Q257469):
 # Encoded URL: http://www.wikidata.org/entity/Q257469
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
-(Note: `%%` is for printf escaping in bash).
+(Note: you will need `%%` for printf escaping in bash).
 
 **Output:**
 ```text
