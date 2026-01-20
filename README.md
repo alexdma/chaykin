@@ -1,6 +1,6 @@
 # Chaykin: Linked Data over the Small Web
 
-A Linked Data server in Rust that makes Linked Data from the Semantic Web available over the Small Web (or "smolweb") through the [Gemini protocol](https://geminiprotocol.net/).
+A Linked Data server in Rust that makes the Semantic Web available over the Small Web (or "smolweb") through the [Gemini protocol](https://geminiprotocol.net/).
 
 ## Synopsis
 
