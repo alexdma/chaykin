@@ -8,7 +8,7 @@ Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptog
 
 ### Why Chaykin?
 
-[https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin](Lester Chaykin) is a fictional particle physicist and the protagonist of Eric Chahi's classic video game _Another World_ (_Out of This World_ for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
+[Lester Chaykin](https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin) is a fictional particle physicist and the protagonist of Eric Chahi's classic video game _Another World_ (_Out of This World_ for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
 
 Another World was also fascinating through its many ways of being minimalistic: in the aesthetics (using cinematic animation on top of a bare-polygon 3D engine), interaction (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
 
@@ -72,11 +72,11 @@ If you got this, then the server successfully:
 
 ## TODO
 Lots and lots, but mainly:
-- Move to RDF support via [https://docs.rs/sophia/](Sophia) and access existing triple stores.
-- Make it an extension of existing Gemini servers in Rust like [https://github.com/mbrubeck/agate](Agate).
+- Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
+- Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
 - Better TLS support: right now it is only supported via self-signed certificates.
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
-- Support something along the lines of the [https://transjovian.org/view/titan/](Titan protocol) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented).
+- Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented).
 - Full specification of the Gemtext RDF serialization.
 - Make the server configurable.
 - This documentation in gemtext :)
