@@ -78,7 +78,7 @@ Lots and lots, but mainly:
 - Better TLS support: right now it is only supported via self-signed certificates.
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
 - Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented).
-- Full specification of the Gemtext RDF serialization.
+- Full specification of the Gemtext RDF serialization (with support for labels!).
 - Make the server configurable.
 - This documentation in gemtext :)
 
