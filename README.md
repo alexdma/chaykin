@@ -4,7 +4,15 @@ A Linked Data server in Rust that makes the Semantic Web available over the Smal
 
 ## Synopsis
 
-Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptography support. It is intended to live alongside HTTP, but also with Gopher and other, more recent application protocols that share the same philosophy of a functional Web that doesn't assume bloated clients to run.
+Gemini is a minimalistic, inextensible, read-only application protocol with cryptography support. It is intended to live alongside HTTP, but also with Gopher and other, more recent application protocols that share the same philosophy of a functional Web that doesn't assume bloated clients to run.
+
+Chaykin tries to follow that spirit by offering an application that can act as a Linked Data server in its own right, or as a proxy to existing Linked Open Data (note the difference here, though I very much hope that, if you choose to serve data through it, they will still be open data). With one instance of Chaykin, you can host a Gemini capsule that does both.
+
+### Why bother?
+
+The contemporary Web is a far cry from the one TimBL (was) promised. At the same time, [Gopher site count is increasing](https://en.wikipedia.org/wiki/Gopher_(protocol)#Server_census). This suggests that those true to the traditional spirit of the Web are attempting to remediate the current situation through alternative protocols, without losing the best of the HTTP world.
+
+With this project, I want to help bring the Web of Data philosophy into that world that stays true to the spirit of the Web of Information, whilst at the same time being a bridge to the better part of the HTTP web.
 
 ### Why Chaykin?
 
@@ -13,6 +21,16 @@ Gemini is a minimalistic, inextensible, read-only Web-like protocol with cryptog
 Another World was also fascinating through its many ways of being minimalistic: in the aesthetic (using cinematic animation on top of a bare-polygon 3D engine), interface (HUDless), and narrative (dialogue-free). Similarly, the minimalist Gemini protocol is here used to host the beauty and complexity of linked data and knowledge graphs.
 
 Finally, Another World was first released on the Amiga computer, and there are Gemini browsers running on AmigaOS with which you can now explore Linked Data too (running this _Rust server_ on the Amiga might be trickier though).
+
+### Why Rust?
+
+Because I've wanted to learn it for long; because a significant chunk of [Gemini software](https://geminiprotocol.net/software/) is in Rust; and because such a minimalist protocol calls for an optimised implementation, which I very much hope to someday deliver in this blazing fast language.
+
+### Why you?
+
+Because I do research on the applicability of the Semantic Web and because, if that wasn't clear already, I am a retrogamer--and a gaming historian in training, I daresay--and miss the thrill of the 1990's Web that was largely there to support the likes of me. So there.
+
+DOI of a panel at Hypertext 2023 where I made my case: [10.1145/3603163.3609074](https://doi.org/10.1145/3603163.3609074)
 
 ## Features
 - **Gemini Server**: Custom Tokio+Rustls implementation.
