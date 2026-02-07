@@ -7,7 +7,8 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 pub fn generate_resource_response(
     resource_iri: &str, 
     properties: &[(String, String)],
-    condensed: bool
+    condensed: bool,
+    hostname: &str
 ) -> String {
     let mut body = format!("# Resource: {}\n\n", resource_iri);
     
@@ -18,7 +19,7 @@ pub fn generate_resource_response(
     };
     body.push_str(&formatted);
     
-    body.push_str("\n=> gemini://localhost/ Home\n");
+    body.push_str(&format!("\n=> gemini://{}/ Home\n", hostname));
     body
 }
 
@@ -45,8 +46,8 @@ fn format_properties_condensed(properties: &[(String, String)]) -> String {
     let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
     for (predicate, object) in properties {
         grouped.entry(predicate.clone())
-            .or_insert_with(Vec::new)
-            .push(object.clone());
+        .or_insert_with(Vec::new)
+        .push(object.clone());
     }
     
     let mut output = String::new();
@@ -78,14 +79,15 @@ fn format_properties_condensed(properties: &[(String, String)]) -> String {
 pub fn generate_proxy_response(
     original_url: &str, 
     properties: &[(String, String)],
-    condensed: bool
+    condensed: bool,
+    hostname: &str
 ) -> String {
     let mut body = format!("# Proxy: {}\n\n", original_url);
     
     let formatted = if condensed {
-        format_proxy_properties_condensed(properties)
+        format_proxy_properties_condensed(properties, hostname)
     } else {
-        format_proxy_properties_expanded(properties)
+        format_proxy_properties_expanded(properties, hostname)
     };
     body.push_str(&formatted);
     
@@ -93,7 +95,7 @@ pub fn generate_proxy_response(
 }
 
 /// Format proxy properties in expanded form
-fn format_proxy_properties_expanded(properties: &[(String, String)]) -> String {
+fn format_proxy_properties_expanded(properties: &[(String, String)], hostname: &str) -> String {
     let mut output = String::new();
     
     for (predicate, object) in properties {
@@ -101,7 +103,7 @@ fn format_proxy_properties_expanded(properties: &[(String, String)]) -> String {
             // Encode external HTTP(S) links to route back through the proxy
             if object.starts_with("http") {
                 let encoded = utf8_percent_encode(object, NON_ALPHANUMERIC).to_string();
-                output.push_str(&format!("=> gemini://localhost/{} {} : {}\n", encoded, predicate, object));
+                output.push_str(&format!("=> gemini://{}/{} {} : {}\n", hostname, encoded, predicate, object));
             } else {
                 output.push_str(&format!("=> {} {} : {}\n", object, predicate, object));
             }
@@ -114,7 +116,7 @@ fn format_proxy_properties_expanded(properties: &[(String, String)]) -> String {
 }
 
 /// Format proxy properties in condensed form (grouped by predicate)
-fn format_proxy_properties_condensed(properties: &[(String, String)]) -> String {
+fn format_proxy_properties_condensed(properties: &[(String, String)], hostname: &str) -> String {
     use std::collections::HashMap;
     
     // Group objects by predicate
@@ -137,7 +139,7 @@ fn format_proxy_properties_condensed(properties: &[(String, String)]) -> String 
                 if object.starts_with("gemini://") || object.starts_with("http") {
                     if object.starts_with("http") {
                         let encoded = utf8_percent_encode(object, NON_ALPHANUMERIC).to_string();
-                        output.push_str(&format!("=> gemini://localhost/{} {}\n", encoded, object));
+                        output.push_str(&format!("=> gemini://{}/{} {}\n", hostname, encoded, object));
                     } else {
                         output.push_str(&format!("=> {}\n", object));
                     }

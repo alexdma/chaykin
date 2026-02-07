@@ -41,6 +41,7 @@ DOI of a panel at Hypertext 2023 where I made my case: [10.1145/3603163.3609074]
     - `Accept: text/turtle` is used for Content Negotiation.
     - Fetched RDF is parsed and rendered.
     - Links to other external resources are re-encoded to point back to the proxy.
+    - You can provide a custom TLS certificate via the `--cert` flag.
 
 ## Setup & Running
 Pretty standard stuff:
@@ -93,12 +94,9 @@ If you got this, then the server successfully:
 Lots and lots, but mainly:
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
 - Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
-- Better TLS support: right now it is only supported via self-signed certificates.
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
 - Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented). Could also be useful if we want a form-like frontend for the user to enter a custom Linked Data URI.
-- Full specification of the Gemtext RDF serialization (with support for labels!).
-- Make the server configurable.
-- This documentation in gemtext :)
+- Full specification, including grammar, of the Gemtext RDF serialization (with support for labels!).
 
 ## Rights
 This is free software; see [LICENSE](LICENSE).

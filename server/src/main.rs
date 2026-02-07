@@ -7,23 +7,55 @@ use tokio::net::TcpListener; // Async TCP listener
 use tokio_rustls::{TlsAcceptor, rustls}; // TLS support (Gemini mandates TLS)
 use anyhow::{Result, Context}; // Error handling with context
 
-const SAMPLE_DATA_PATH: &str = "sample_data.ttl";
-const IP: &str = "127.0.0.1";
-const PORT: u16 = 1965;
-const USER_AGENT: &str = "Chaykin-Gemini-Proxy/0.1.0 (+https://github.com/alexdma/ldog)";
+use clap::Parser; // CLI argument parsing
+use std::fs::File; 
+use std::io::BufReader;
+use std::path::PathBuf;
+use rustls_pemfile::{certs, private_key};
+
+const USER_AGENT: &str = "Chaykin-Gemini-Proxy/0.1.0 (+https://github.com/alexdma/chaykin)";
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// IP address to bind to
+    #[arg(long, default_value = "127.0.0.1")]
+    host: String,
+
+    /// Port number to bind to
+    #[arg(long, default_value_t = 1965)]
+    port: u16,
+
+    /// Path to the RDF data file
+    #[arg(long, default_value = "sample_data.ttl")]
+    file: String,
+
+    /// Path to TLS certificate (PEM)
+    #[arg(long)]
+    cert: Option<PathBuf>,
+
+    /// Path to TLS private key (PEM)
+    #[arg(long)]
+    key: Option<PathBuf>,
+
+    /// Hostname for generating self-referencing links
+    #[arg(long, default_value = "localhost")]
+    hostname: String,
+}
 
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
     println!("Starting Chaykin (Gemini Linked Data Server)...");
 
     // Load RDF Store
     let mut store = Store::new();
-    if let Err(e) = store.load_from_file(SAMPLE_DATA_PATH)
-    .context("Failed to load sample data") {
+    if let Err(e) = store.load_from_file(&args.file)
+    .context(format!("Failed to load sample data from {}", args.file)) {
         eprintln!("Warning: {:?}", e);
     }
-    println!("Loaded {} triples.", store.triple_count());
+    println!("Loaded {} triples from {}.", store.triple_count(), args.file);
     let store = Arc::new(store);
 
     // Create a shared HTTP client for proxying
@@ -32,19 +64,21 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to create HTTP client")?;
     let http_client = Arc::new(http_client);
+    let hostname = Arc::new(args.hostname.clone());
 
 
     // Create and bind TLS server
-    let (listener, acceptor) = create_tls_server(IP, PORT).await?;
+    let (listener, acceptor) = create_tls_server(&args.host, args.port, args.cert, args.key).await?;
 
     loop {
         let (stream, peer_addr) = listener.accept().await?;
         let acceptor = acceptor.clone();
         let store = store.clone();
         let http_client = http_client.clone();
+        let hostname = hostname.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, acceptor, peer_addr, store, http_client).await {
+            if let Err(e) = handle_connection(stream, acceptor, peer_addr, store, http_client, hostname).await {
                 eprintln!("Error handling connection from {}: {:?}", peer_addr, e);
             }
         });
@@ -52,21 +86,40 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn create_tls_server(ip: &str, port: u16) -> Result<(TcpListener, TlsAcceptor)> {
-    println!("=== Generating self-signed certificate (once at startup) ===");
-    
-    // Generate self-signed certificate
-    let subject_alt_names = vec!["localhost".to_string(), "127.0.0.1".to_string()];
-    let cert = rcgen::generate_simple_self_signed(subject_alt_names)
-        .context("Failed to generate certificate")?;
-    let cert_der = cert.cert.der().to_vec();
-    let key_der = cert.key_pair.serialize_der();
-    
-    println!("Certificate generated with SANs: localhost, 127.0.0.1");
-    println!("This certificate will be re-used for all connections.");
+async fn create_tls_server(ip: &str, port: u16, cert_path: Option<PathBuf>, key_path: Option<PathBuf>) -> Result<(TcpListener, TlsAcceptor)> {
+    let (certs, key) = if let (Some(c), Some(k)) = (cert_path, key_path) {
+        println!("Loading TLS certificate from {:?} and key from {:?}", c, k);
+        let cert_file = File::open(&c).context("Failed to open certificate file")?;
+        let mut cert_reader = BufReader::new(cert_file);
+        let certs = certs(&mut cert_reader)
+            .collect::<Result<Vec<_>, _>>()
+            .context("Failed to parse certificates")?;
 
-    let certs = vec![rustls::pki_types::CertificateDer::from(cert_der)];
-    let key = rustls::pki_types::PrivateKeyDer::try_from(key_der).unwrap();
+        let key_file = File::open(&k).context("Failed to open key file")?;
+        let mut key_reader = BufReader::new(key_file);
+        let key = private_key(&mut key_reader)
+            .context("Failed to parse private key")?
+            .ok_or_else(|| anyhow::anyhow!("No private key found"))?;
+        
+        (certs, key)
+    } else {
+        println!("=== Generating self-signed certificate (dev mode) ===");
+        
+        // Generate self-signed certificate
+        let subject_alt_names = vec!["localhost".to_string(), "127.0.0.1".to_string(), ip.to_string()];
+        let cert = rcgen::generate_simple_self_signed(subject_alt_names)
+            .context("Failed to generate certificate")?;
+        let cert_der = cert.cert.der().to_vec();
+        let key_der = cert.key_pair.serialize_der();
+        
+        println!("Certificate generated for: localhost, 127.0.0.1, {}", ip);
+        println!("This certificate will be re-used for all connections this session.");
+
+        let certs = vec![rustls::pki_types::CertificateDer::from(cert_der)];
+        let key = rustls::pki_types::PrivateKeyDer::try_from(key_der).unwrap();
+        
+        (certs, key)       
+    };
 
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -101,6 +154,7 @@ async fn handle_connection(
     peer_addr: SocketAddr,
     store: Arc<Store>,
     http_client: Arc<reqwest::Client>,
+    hostname: Arc<String>,
 ) -> Result<()> {
     let mut stream = acceptor.accept(stream).await?;
     println!("Accepted TLS connection from {}", peer_addr);
@@ -194,7 +248,7 @@ async fn handle_connection(
                         let response = gemtext::format_gemini_response(&debug_body);
                         stream.write_all(response.as_bytes()).await?;
                     } else {
-                        let body = gemtext::generate_proxy_response(path, &properties, condensed);
+                        let body = gemtext::generate_proxy_response(path, &properties, condensed, &hostname);
                         let response = gemtext::format_gemini_response(&body);
                         stream.write_all(response.as_bytes()).await?;
                     }
@@ -220,6 +274,7 @@ async fn handle_connection(
     // Hack: Replace 127.0.0.1 with localhost to match sample data
     // Also strip query params for the lookup
     let (clean_lookup_iri, _) = parse_query_params(request_url);
+    // TODO: This replacement hack might need to be smarter with configurable hostnames
     let lookup_iri = clean_lookup_iri.replace("127.0.0.1", "localhost").replace(":1965", "");
 
     let properties = store.get_resource_description(&lookup_iri);
@@ -229,7 +284,7 @@ async fn handle_connection(
         let response = gemtext::format_gemini_response(&body);
         stream.write_all(response.as_bytes()).await?;
     } else {
-        let body = gemtext::generate_resource_response(&lookup_iri, &properties, condensed);
+        let body = gemtext::generate_resource_response(&lookup_iri, &properties, condensed, &hostname);
         let response = gemtext::format_gemini_response(&body);
         stream.write_all(response.as_bytes()).await?;
     }
