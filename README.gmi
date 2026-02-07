@@ -44,19 +44,22 @@ Because I do research on the applicability of the Semantic Web and because, if t
 ## Features
 
 * Gemini Server: Custom Tokio+Rustls implementation.
-* Linked Data Store: Consumes RDF data in Turtle via `rio_turtle` and holds them into an in-memory store.
+* Linked Data Store: Consumes RDF data in Turtle via rio_turtle and holds them into an in-memory store.
 * Gemtext Mapping: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.
 * External Proxy: Acts as a browser for all the Linked Open Data out there.
-  * Encoded URLs in the request path are fetched via `reqwest`.
-  * `Accept: text/turtle` is used for Content Negotiation.
+
+### External Proxy Features
+  * Encoded URLs in the request path are fetched via reqwest.
+  * Accept: text/turtle is used for Content Negotiation.
   * Fetched RDF is parsed and rendered.
   * Links to other external resources are re-encoded to point back to the proxy.
+  * You can provide a custom TLS certificate via the --cert flag.
 
 ## Setup & Running
 
 Pretty standard stuff:
 
-1. Dependencies: `tokio`, `rustls`, `rcgen`, `rio_turtle`, `rio_api`, `reqwest`, `percent-encoding`.
+1. Dependencies: tokio, rustls, rcgen, rio_turtle, rio_api, reqwest, percent-encoding.
 2. Build:
 
 ```sh
@@ -66,13 +69,13 @@ cargo build
 
 3. Run:
 
-Either launch the `chaykin` executable in `server/target`, or
+Either launch the chaykin executable in server/target, or
 
 ```sh
 cargo run
 ```
 
-The server listens on `127.0.0.1:1965` by default.
+The server listens on 127.0.0.1:1965 by default.
 
 ### Configuration
 
@@ -83,11 +86,11 @@ cargo run -- --help
 ```
 
 Arguments:
-* `--host`: IP address to bind to (default: 127.0.0.1)
-* `--port`: Port number to bind to (default: 1965)
-* `--file`: Path to the RDF data file (default: sample_data.ttl)
-* `--cert`: Path to TLS certificate (PEM)
-* `--key`: Path to TLS private key (PEM)
+* --host: IP address to bind to (default: 127.0.0.1)
+* --port: Port number to bind to (default: 1965)
+* --file: Path to the RDF data file (default: sample_data.ttl)
+* --cert: Path to TLS certificate (PEM)
+* --key: Path to TLS private key (PEM)
 
 If no certificate/key is provided, a self-signed certificate is generated for development.
 
@@ -99,7 +102,7 @@ If no certificate/key is provided, a self-signed certificate is generated for de
 printf "gemini://localhost/me\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 
-Returns data about yours truly (from `sample_data.ttl`).
+Returns data about yours truly (from sample_data.ttl).
 
 ### 2. External Resource (Proxy)
 
@@ -112,7 +115,7 @@ See Another World on Wikidata:
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 
-(Note: you will need to replace every `%` with `%%` for printf escaping in bash).
+(Note: you will need to replace every "%" with "%%" for printf escaping in bash).
 
 **Output:**
 
@@ -129,10 +132,10 @@ printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n"
 If you got this, then the server successfully:
 
 1. Decoded the URL.
-2. Fetched the Turtle data from `www.wikidata.org`.
+2. Fetched the Turtle data from www.wikidata.org.
 3. Parsed the triples.
 4. Found the subject (handling http/https mismatch automatically).
-5. Generated links pointing back to `gemini://localhost/...`.
+5. Generated links pointing back to gemini://localhost/...`.
 
 ## Rights
 
