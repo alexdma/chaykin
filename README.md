@@ -35,7 +35,7 @@ DOI of a panel at Hypertext 2023 where I made my case: [10.1145/3603163.3609074]
 ## Features
 - **Gemini Server**: Custom Tokio+Rustls implementation.
 - **Linked Data Store**: Consumes RDF data in Turtle via `rio_turtle` and holds them into an in-memory store.
-- **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.
+- **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.  A condensed syntax, which groups predicates by property, is also supported.
 - **External Proxy**: Acts as a browser for all the Linked Open Data out there.
     - Encoded URLs in the request path are fetched via `reqwest`.
     - `Accept: text/turtle` is used for Content Negotiation.
@@ -56,7 +56,24 @@ Pretty standard stuff:
    ```bash
    cargo run
    ```
-   The server listens on `127.0.0.1:1965`. I'll make that configurable, eventually.
+   The server listens on `127.0.0.1:1965`. Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish and with beautiful Gemtext rendering) or [Alhena](https://metaloupe.com/alhena/alhena.html) (flexible and cross-protocol).
+
+### Configuration
+
+You can configure the server using command-line arguments:
+
+```bash
+cargo run -- --help
+```
+
+Arguments:
+- `--host`: IP address to bind to (default: 127.0.0.1)
+- `--port`: Port number to bind to (default: 1965)
+- `--file`: Path to the RDF data file (default: sample_data.ttl)
+- `--cert`: Path to TLS certificate (PEM)
+- `--key`: Path to TLS private key (PEM)
+
+If no certificate/key is provided, a self-signed certificate is generated for development.
 
 ## Usage & Verification
 ### 1. Local Resource
@@ -96,6 +113,7 @@ Lots and lots, but mainly:
 - Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
 - Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented). Could also be useful if we want a form-like frontend for the user to enter a custom Linked Data URI.
+- Support for more underground Small Web protocols, like [Spartan](https://github.com/michael-lazar/spartan) and [Nex](https://nightfall.city/nex/info/specification.txt).
 - Full specification, including grammar, of the Gemtext RDF serialization (with support for labels!).
 
 ## Rights

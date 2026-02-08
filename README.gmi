@@ -45,7 +45,7 @@ Because I do research on the applicability of the Semantic Web and because, if t
 
 * Gemini Server: Custom Tokio+Rustls implementation.
 * Linked Data Store: Consumes RDF data in Turtle via rio_turtle and holds them into an in-memory store.
-* Gemtext Mapping: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.
+* Gemtext Mapping: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph. A condensed syntax, which groups predicates by property, is also supported.
 * External Proxy: Acts as a browser for all the Linked Open Data out there.
 
 ### External Proxy Features
@@ -75,7 +75,9 @@ Either launch the chaykin executable in server/target, or
 cargo run
 ```
 
-The server listens on 127.0.0.1:1965 by default.
+The server listens on 127.0.0.1:1965 by default. Go there with your favourite Gemini client, like
+=> gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish and with beautiful Gemtext rendering)
+=> http://metaloupe.com/alhena/alhena.html Alhena (flexible and cross-protocol) [http]
 
 ### Configuration
 
@@ -136,6 +138,21 @@ If you got this, then the server successfully:
 3. Parsed the triples.
 4. Found the subject (handling http/https mismatch automatically).
 5. Generated links pointing back to gemini://localhost/...`.
+
+## TODO
+Lots and lots, but mainly:
+* Move to RDF support via Sophia and access existing triple stores.
+* Make it an extension of existing Gemini servers in Rust like Agate.
+* SPARQL API? Only if it can respect the basic principles of the Small Web.
+* Support something along the lines of the Titan protocol if we need to have something like HTTP POST (which we would if SPARQL were to be implemented). Could also be useful if we want a form-like frontend for the user to enter a custom Linked Data URI.
+* Support for more underground Small Web protocols, like Spartan and Nex.
+* Full specification, including grammar, of the Gemtext RDF serialization (with support for labels!).
+
+=> https://docs.rs/sophia/ Sophia, a Rust crate for RDF
+=> https://github.com/mbrubeck/agate Agate, a Gemini server in Rust
+=> https://transjovian.org/view/titan/ Titan, a Small Web protocol with support for uploads
+=> https://github.com/michael-lazar/spartan Spartan, a Small Web protocol
+=> https://nightfall.city/nex/info/specification.txt Nex, a Small Web protocol
 
 ## Rights
 
