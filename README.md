@@ -51,12 +51,22 @@ Pretty standard stuff:
    cd server
    cargo build
    ```
+   Or, if you want to build it as a Docker image:
+   ```bash
+   docker build -t chaykin .
+   ```
+
 3. **Run**:
    Either launch the `chaykin` executable in `server/target`, or
    ```bash
    cargo run
    ```
    The server listens on `127.0.0.1:1965`. Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish and with beautiful Gemtext rendering) or [Alhena](https://metaloupe.com/alhena/alhena.html) (flexible and cross-protocol).
+
+   To run it in a Docker container:
+   ```bash
+   docker run -p 1965:1965 chaykin
+   ```
 
 ### Configuration
 

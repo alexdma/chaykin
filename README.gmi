@@ -67,6 +67,11 @@ cd server
 cargo build
 ```
 
+To build its Docker image:
+```sh
+docker build -t chaykin .
+```
+
 3. Run:
 
 Either launch the chaykin executable in server/target, or
@@ -78,6 +83,11 @@ cargo run
 The server listens on 127.0.0.1:1965 by default. Go there with your favourite Gemini client, like
 => gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish and with beautiful Gemtext rendering)
 => http://metaloupe.com/alhena/alhena.html Alhena (flexible and cross-protocol) [http]
+
+To run it in a Docker container:
+```sh
+docker run -p 1965:1965 chaykin
+```
 
 ### Configuration
 
