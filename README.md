@@ -33,7 +33,7 @@ Because I do research on the applicability of the Semantic Web and because, if t
 DOI of a panel at Hypertext 2023 where I made my case: [10.1145/3603163.3609074](https://doi.org/10.1145/3603163.3609074)
 
 ## Features
-- **Gemini Server**: Custom Tokio+Rustls implementation.
+- **Multi-Protocol Server**: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex TCP listeners.
 - **Linked Data Store**: Consumes RDF data in Turtle via `rio_turtle` and holds them into an in-memory store.
 - **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.  A condensed syntax, which groups predicates by property, is also supported.
 - **External Proxy**: Acts as a browser for all the Linked Open Data out there.
@@ -78,7 +78,9 @@ cargo run -- --help
 
 Arguments:
 - `--host`: IP address to bind to (default: 127.0.0.1)
-- `--port`: Port number to bind to (default: 1965)
+- `--port`: Port number for Gemini/Titan to bind to (default: 1965)
+- `--spartan-port`: Port number for Spartan (default: 300)
+- `--nex-port`: Port number for Nex (default: 1900)
 - `--file`: Path to the RDF data file (default: sample_data.ttl)
 - `--cert`: Path to TLS certificate (PEM)
 - `--key`: Path to TLS private key (PEM)
@@ -86,44 +88,43 @@ Arguments:
 If no certificate/key is provided, a self-signed certificate is generated for development.
 
 ## Usage & Verification
-### 1. Local Resource
+### 1. Gemini (Port 1965)
+Fetch a local resource:
 ```bash
 printf "gemini://localhost/me\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
-Returns data about yours truly (from [sample_data.ttl](/server/sample_data.ttl)).
 
-### 2. External Resource (Proxy)
-See [Another World on Wikidata](http://www.wikidata.org/entity/Q257469):
+Proxy an external resource (e.g. [Another World on Wikidata](http://www.wikidata.org/entity/Q257469)):
 ```bash
 # Encoded URL: http://www.wikidata.org/entity/Q257469
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
-(Note: you will need to replace every `%` with `%%` for printf escaping in bash).
 
-**Output:**
-```text
-20 text/gemini
-# Proxy: http://www.wikidata.org/entity/Q257469
-...
-=> gemini://localhost/http%3A%2F%2Fdata%2Ebnf%2Efr%2Fark%3A%2F12148%2Fcb169157795%23about http://www.wikidata.org/prop/direct-normalized/P268 : http://data.bnf.fr/ark:/12148/cb169157795#about 
-...
-* http://www.wikidata.org/prop/direct/P1476: LanguageTaggedString { value: "Out of This World", language: "en" }
-...
+### 2. Titan (Port 1965)
+Upload a URI to inspect via Titan payload:
+```bash
+{ printf "titan://localhost/;size=33;mime=text/plain\r\nhttp://dbpedia.org/resource/Earth"; sleep 1; } | openssl s_client -crlf -verify_quiet -connect localhost:1965
 ```
-If you got this, then the server successfully:
-1.  Decoded the URL.
-2.  Fetched the Turtle data from `www.wikidata.org`.
-3.  Parsed the triples.
-4.  Found the subject (handling http/https mismatch automatically).
-5.  generated links pointing back to `gemini://localhost/...`.
+
+### 3. Spartan (Port 300)
+**NOTE**: Binding to ports below 1024 (like 300) may require root privileges on Linux/Unix systems.
+Connect and pass the target URI as the Spartan payload:
+```bash
+printf "localhost / 35\r\nhttp://dbpedia.org/resource/Earth" | nc localhost 300
+```
+
+### 4. Nex (Port 1900)
+Input the URL-encoded path to get a raw text breakdown:
+```bash
+echo -e "/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\n" | nc localhost 1900
+```
 
 ## TODO
 Lots and lots, but mainly:
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
 - Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
-- Support something along the lines of the [Titan protocol](https://transjovian.org/view/titan/) if we need to have something like HTTP POST (which we would if SPARQL were to be implemented). Could also be useful if we want a form-like frontend for the user to enter a custom Linked Data URI.
-- Support for more underground Small Web protocols, like [Spartan](https://github.com/michael-lazar/spartan) and [Nex](https://nightfall.city/nex/info/specification.txt).
+
 - Full specification, including grammar, of the Gemtext RDF serialization (with support for labels!).
 
 ## Rights
