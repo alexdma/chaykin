@@ -5,8 +5,29 @@ use rio_turtle::{TurtleParser, TurtleError};
 use rio_api::parser::TriplesParser;
 use rio_api::model::{Subject, Term};
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum RdfNode {
+    Iri(String),
+    BlankNode(String),
+    SimpleLiteral(String),
+    LanguageTaggedLiteral(String, String),
+    DatatypedLiteral(String, String),
+}
+
+impl std::fmt::Display for RdfNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RdfNode::Iri(iri) => write!(f, "{}", iri),
+            RdfNode::BlankNode(id) => write!(f, "_:{}", id),
+            RdfNode::SimpleLiteral(v) => write!(f, "\"{}\"", v),
+            RdfNode::LanguageTaggedLiteral(v, l) => write!(f, "\"{}\"@{}", v, l),
+            RdfNode::DatatypedLiteral(v, dt) => write!(f, "\"{}\"^^<{}>", v, dt),
+        }
+    }
+}
+
 pub struct Store {
-    triples: Vec<(String, String, String)>,
+    triples: Vec<(String, String, RdfNode)>,
 }
 
 impl Store {
@@ -37,12 +58,16 @@ impl Store {
             // Convert Predicate to String
             let p = t.predicate.iri.to_string();
 
-            // Convert Object to String
+            // Convert Object to RdfNode
             let o = match t.object {
-                Term::NamedNode(n) => n.iri.to_string(),
-                Term::BlankNode(b) => b.id.to_string(),
-                Term::Literal(l) => format!("{:?}", l), 
-                Term::Triple(_) => "triple".to_string(),
+                Term::NamedNode(n) => RdfNode::Iri(n.iri.to_string()),
+                Term::BlankNode(b) => RdfNode::BlankNode(b.id.to_string()),
+                Term::Literal(l) => match l {
+                    rio_api::model::Literal::Simple { value } => RdfNode::SimpleLiteral(value.to_string()),
+                    rio_api::model::Literal::LanguageTaggedString { value, language } => RdfNode::LanguageTaggedLiteral(value.to_string(), language.to_string()),
+                    rio_api::model::Literal::Typed { value, datatype } => RdfNode::DatatypedLiteral(value.to_string(), datatype.iri.to_string()),
+                }, 
+                Term::Triple(_) => RdfNode::SimpleLiteral("triple".to_string()),
             };
             
             triples.push((s, p, o));
@@ -57,7 +82,7 @@ impl Store {
         self.triples.len()
     }
 
-    pub fn get_resource_description(&self, iri: &str) -> Vec<(String, String)> {
+    pub fn get_resource_description(&self, iri: &str) -> Vec<(String, RdfNode)> {
         let mut results = Vec::new();
         for (s, p, o) in &self.triples {
              if s == iri {

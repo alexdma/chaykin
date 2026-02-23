@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::store::Store;
+use crate::store::{Store, RdfNode};
 use anyhow::Result;
 
 pub mod gemini;
@@ -10,7 +10,7 @@ pub mod nex;
 /// Common data structures and abstractions shared among protocols
 
 pub enum ResourceData {
-    Description(Vec<(String, String)>),
+    Description(Vec<(String, RdfNode)>),
     ProxyError(String),
     DebugSubjects(usize, Vec<String>),
     NotFound,
