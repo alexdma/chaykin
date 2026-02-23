@@ -55,17 +55,18 @@ Pretty standard stuff:
    ```bash
    docker build -t chaykin .
    ```
+   (the above will build an image with a self-signed certificate)
 
 3. **Run**:
    Either launch the `chaykin` executable in `server/target`, or
    ```bash
    cargo run
    ```
-   The server listens on `127.0.0.1:1965`. Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish and with beautiful Gemtext rendering) or [Alhena](https://metaloupe.com/alhena/alhena.html) (flexible and cross-protocol).
+   The server listens on `127.0.0.1:1965` by default (for Gemini/Titan). Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish but without support for Titan) or [Alhena](https://metaloupe.com/alhena/alhena.html) (not as fancy, but flexible and multi-protocol).
 
-   To run it in a Docker container:
+   To run it in a Docker container (mapping the Spartan port to one that doesn't require a super user):
    ```bash
-   docker run -p 1965:1965 chaykin
+   docker run -p 1965:1965 -p 3300:300 -p 1900:1900 chaykin
    ```
 
 ### Configuration
@@ -88,22 +89,23 @@ Arguments:
 If no certificate/key is provided, a self-signed certificate is generated for development.
 
 ## Usage & Verification
+The homepage at `localhost` for each protocol provides helpful hints on where to go from there. To try each protocol straight away:
+
 ### 1. Gemini (Port 1965)
 Fetch a local resource:
 ```bash
 printf "gemini://localhost/me\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 
-Proxy an external resource (e.g. [Another World on Wikidata](http://www.wikidata.org/entity/Q257469)):
+Proxy an external resource (e.g. [Another World on Wikidata](http://www.wikidata.org/entity/Q257469)), which must be URL-encoded:
 ```bash
-# Encoded URL: http://www.wikidata.org/entity/Q257469
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 
 ### 2. Titan (Port 1965)
 Upload a URI to inspect via Titan payload:
 ```bash
-{ printf "titan://localhost/;size=33;mime=text/plain\r\nhttp://dbpedia.org/resource/Earth"; sleep 1; } | openssl s_client -crlf -verify_quiet -connect localhost:1965
+{ printf "titan://localhost/;size=33;mime=text/plain\r\nhttp://www.wikidata.org/entity/Q257469"; sleep 1; } | openssl s_client -crlf -verify_quiet -connect localhost:1965
 ```
 
 ### 3. Spartan (Port 300)
@@ -111,7 +113,7 @@ Upload a URI to inspect via Titan payload:
 
 Connect and pass the target URI as the Spartan payload:
 ```bash
-printf "localhost / 35\r\nhttp://dbpedia.org/resource/Earth" | nc localhost 300
+printf "localhost / 35\r\nhttp://www.wikidata.org/entity/Q257469" | nc localhost 300
 ```
 
 ### 4. Nex (Port 1900)
@@ -122,11 +124,12 @@ echo -e "/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\n" | nc localhost 190
 
 ## TODO
 Lots and lots, but mainly:
+- Allow selective enabling of protocols that a server instance should support.
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
-- Make it an extension of existing Gemini servers in Rust like [Agate](https://github.com/mbrubeck/agate).
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
 - Investigate whether it's worth supporting good old Gopher, too.
-- Full specification, including grammar, of the Gemtext RDF serialization (with support for labels!).
+- Where possible, add support for language-specific labels in the Gemtext RDF serialization (we don't have the luxury of an `Accept-Language` header here).
+- Consider Chaykin extensions to existing Small Web servers in Rust, like [Agate](https://github.com/mbrubeck/agate).
 
 ## Rights
 This is free software; see [LICENSE](LICENSE).

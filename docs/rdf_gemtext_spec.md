@@ -329,7 +329,7 @@ Given `<http://example.org/Q257469> dcterms:identifier "71181"`:
 => http://www.w3.org/2001/XMLSchema#dateTime "1991-01-01T00:00:00Z"^^xsd:dateTime
 ```
 
-### 7.3 Proxy Mode (Expanded)
+### 7.3 Expanded Mode (Proxy)
 
 Same triples as §7.1, with proxy host `example.gemini`:
 
