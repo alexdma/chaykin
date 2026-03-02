@@ -128,7 +128,7 @@ Lots and lots, but mainly:
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
 - SPARQL API? Only if it can respect the basic principles of the Small Web.
 - Investigate whether it's worth supporting good old Gopher, too.
-- Where possible, add support for language-specific labels in the Gemtext RDF serialization (we don't have the luxury of an `Accept-Language` header here).
+- More features supported by the Gemtext RDF serialization: quads, blank node expansion, RDF-star; where possible, add support for language-specific labels (we don't have the luxury of an `Accept-Language` header here).
 - Consider Chaykin extensions to existing Small Web servers in Rust, like [Agate](https://github.com/mbrubeck/agate).
 
 ## Rights
