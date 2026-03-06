@@ -25,6 +25,7 @@ pub async fn handle_connection(
     store: Arc<Store>,
     http_client: Arc<reqwest::Client>,
     hostname: Arc<String>,
+    lang: Arc<Option<String>>,
 ) -> Result<()> {
     println!("Gemini Request: {}", request_url);
 
@@ -74,9 +75,9 @@ pub async fn handle_connection(
     match resource_data {
         ResourceData::Description(properties) => {
             let body = if is_proxy {
-                gemtext::generate_proxy_response(&path, &properties, condensed, &hostname)
+                gemtext::generate_proxy_response(&path, &properties, condensed, &hostname, &lang)
             } else {
-                gemtext::generate_resource_response(&path, &properties, condensed, &hostname)
+                gemtext::generate_resource_response(&path, &properties, condensed, &hostname, &lang)
             };
             let response = gemtext::format_gemini_response(&body);
             stream.write_all(response.as_bytes()).await?;

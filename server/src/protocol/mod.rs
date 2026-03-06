@@ -6,6 +6,7 @@ pub mod gemini;
 pub mod titan;
 pub mod spartan;
 pub mod nex;
+pub mod nps;
 
 /// Common data structures and abstractions shared among protocols
 

@@ -15,6 +15,7 @@ pub async fn handle_connection(
     store: Arc<Store>,
     http_client: Arc<reqwest::Client>,
     hostname: Arc<String>,
+    lang: Arc<Option<String>>,
 ) -> Result<()> {
     println!("Accepted Spartan connection from {}", peer_addr);
 
@@ -109,9 +110,9 @@ pub async fn handle_connection(
     match resource_data {
         ResourceData::Description(properties) => {
             let body = if is_proxy {
-                gemtext::generate_proxy_response(&path_for_lookup, &properties, condensed, &hostname)
+                gemtext::generate_proxy_response(&path_for_lookup, &properties, condensed, &hostname, &lang)
             } else {
-                gemtext::generate_resource_response(&path_for_lookup, &properties, condensed, &hostname)
+                gemtext::generate_resource_response(&path_for_lookup, &properties, condensed, &hostname, &lang)
             };
             // Spartan success status is '2'
             let response = format!("2 text/gemini\r\n{}", body);

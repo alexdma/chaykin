@@ -1,51 +1,18 @@
 # Chaykin: Linked Data over the Small Web
 
-A Linked Data server in Rust that makes the Semantic Web available over the Small Web (or "smolweb") through a variety of protocols, including Gemini, Titan, Spartan, and Nex.
+A Linked Data server in Rust that makes the Semantic Web available over the Small Web (or "smolweb") through a variety of protocols, including Gemini, Titan, Spartan, Nex, and NPS.
 
 => gemini://geminiprotocol.net/ Gemini Protocol
 => gemini://transjovian.org/titan/index Titan Protocol
 => gemini://spartan.mozz.us/ Spartan Protocol
 => https://nightfall.city/nex/info/ Nex Protocol
+=> https://github.com/andrew-d/nps NPS Protocol
 
-## Synopsis
-
-Several internet communities, from retro-computing enthusiasts to advocates for IndieWeb, decentralization and data sovereignty, are proposing and implementing application protocols that are intended to live alongside HTTP (or the seminal Gopher, for that matter) but are simpler and allow the user to focus on the information sought, rather than the presentation. Gemini is the best-known of these, and possibly the most thoroughly specified: a minimalist, inextensible, read-only application protocol with cryptography support and even its own hypertext format, Gemtext. Other protocols provide different features, such as data upload (Titan, Spartan) or a more flexible approach to content negotiation (Nex), but all ultimately share the same philosophy of a functional Web that doesn't need bloated clients to run.
-
-Chaykin tries to follow that spirit by offering an application that can act as a Linked Data server in its own right, or as a proxy to existing Linked Open Data (note the "Open" here, though I very much hope that, if you choose to serve data through it, they will indeed be open data). With one instance of Chaykin, you can host a site (or _capsule_ in Gemini parlance, or _station_ in Nex-talk) that does both.
-
-### Why bother?
-The contemporary Web is a far cry from the one we were promised: that should be before all our eyes by now. At the same time, Gopher site count is increasing. This suggests that those true to the traditional spirit of the Web are attempting to remediate the current situation through alternative protocols, without losing the best of the HTTP world. These brilliant minds, however, seem largely focused on the vernacular Web of Information, and yet the HTTP web has done something good in its evolution, such as enabling the Semantic Web of Data. Is it not worth doing something with it, without all that clutter coming from social media, monetisation and the like?
-
-=> https://en.wikipedia.org/wiki/Gopher_(protocol)#Server_census Gopher site count is increasing
-
-This is my way of answering "yes" to that question. With this project, I want to help bring the Web of Data philosophy into that world that stays true to the spirit of the Web of Information, whilst at the same time being a bridge to the better part of the HTTP web.
-
-### Why Chaykin?
-
-Lester Chaykin is a fictional particle physicist and the protagonist of Eric Chahi's classic video game Another World ("Out of This World" for my American friends). Much like Dr Chaykin is transported out of this world and into another, this project attempts to bring Linked Data out of the cluttered, HTTP-based web and into the dimension of the small web.
-
-=> https://another-world-game.fandom.com/wiki/The_Story_of_Lester_Knight_Chaykin Lester Chaykin
-=> http://www.wikidata.org/entity/Q257469 Another World (Wikidata)
-
-Another World was also fascinating through its many ways of being minimalistic: in the aesthetic (using cinematic animation on top of a bare-polygon 3D engine), interface (HUDless), and narrative (dialogue-free). Similarly, minimalist Web protocols are here used to host the beauty and complexity of linked data and knowledge graphs.
-
-Finally, Another World was first released on the Amiga computer, and there are Gemini browsers running on AmigaOS with which you can now explore Linked Data too (running this _Rust server_ on the Amiga might be trickier though).
-
-### Why Rust?
-
-Because I've wanted to learn it for long; because a significant chunk of Gemini software is in Rust; and because such a minimalist protocol calls for an optimised implementation, which I very much hope to someday deliver in this blazing fast language.
-
-=> https://geminiprotocol.net/software/ Gemini software in Rust
-
-### Why you?
-
-Because I do research on the applicability of the Semantic Web and because, if that wasn't clear already, I am a retrogamer--and a gaming historian in training, I daresay--and miss the thrill of the 1990's Web that was largely there to support the likes of me. So there.
-
-=> https://doi.org/10.1145/3603163.3609074 DOI of a panel at Hypertext 2023 where I made my case
+More on this in docs/about.gmi
 
 ## Features
 
-* Multi-Protocol Server: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex TCP listeners.
+* Multi-Protocol Server: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex/NPS TCP listeners. Enabled protocols and ports can be configured.
 * Linked Data Store: Consumes RDF data in Turtle via rio_turtle and holds them into an in-memory store.
 * Gemtext Mapping: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph. A condensed syntax, which groups predicates by property, is also supported. The specification is documented in the `docs` directory.
 * External Proxy: Acts as a browser for all the Linked Open Data out there.
@@ -61,7 +28,7 @@ Because I do research on the applicability of the Semantic Web and because, if t
 
 Pretty standard stuff:
 
-1. Dependencies: tokio, rustls, rcgen, rio_turtle, rio_api, reqwest, percent-encoding.
+1. Dependencies: Mainly tokio, rustls, rcgen, rio_turtle, rio_api, and reqwest.
 2. Build:
 
 ```sh
@@ -84,8 +51,8 @@ cargo run
 ```
 
 The server listens on `127.0.0.1:1965` by default (for Gemini/Titan). Go there with your favourite Gemini client, like
-=> gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish and with beautiful Gemtext rendering)
-=> http://metaloupe.com/alhena/alhena.html Alhena (flexible and cross-protocol) [http]
+=> gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish, with support for Spartan but not Titan)
+=> http://metaloupe.com/alhena/alhena.html Alhena (not as fancy, but flexible and multi-protocol) [http]
 
 To run it in a Docker container (mapping the Spartan port to one that doesn't require a super user):
 ```sh
@@ -102,12 +69,17 @@ cargo run -- --help
 
 Arguments:
 * --host: IP address to bind to (default: 127.0.0.1)
-* --port: Port number for Gemini/Titan to bind to (default: 1965)
+* --gemini-port: Port number for Gemini/Titan to bind to (default: 1965)
 * --spartan-port: Port number for Spartan (default: 300)
 * --nex-port: Port number for Nex (default: 1900)
-* --file: Path to the RDF data file (default: sample_data.ttl)
+* --nps-port: Port number for NPS (default: 1915)
+* --protocols: Comma-separated list of enabled protocols. cargo run -- list-protocols to see the list (default: all)
+* --disable-titan: Disable Titan (assumes Gemini is enabled)
+* --disable-nps: Disable NPS (assumes Nex is enabled)
+* --file: Path to an initial RDF data file (default: sample_data.ttl)
 * --cert: Path to TLS certificate (PEM)
 * --key: Path to TLS private key (PEM)
+* --lang: Preferred language for language-tagged literals in Gemtext (e.g. en, fr, de)
 
 If no certificate/key is provided, a self-signed certificate is generated for development.
 
@@ -127,7 +99,7 @@ Proxy an external resource (e.g. Another World on Wikidata), which must be URL-e
 printf "gemini://localhost/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\r\n" | openssl s_client -connect 127.0.0.1:1965 -quiet
 ```
 
-### 2. Titan (Port 1965)
+### 2. Titan (Port 1965, Gemini must be enabled)
 
 Upload a URI to inspect via Titan payload:
 ```sh
@@ -142,20 +114,29 @@ Connect and pass the target URI as the Spartan payload:
 printf "localhost / 35\r\nhttp://www.wikidata.org/entity/Q257469" | nc localhost 300
 ```
 
-### 4. Nex (Port 1900)
+### 4. Nex (Port 1900, NPS must be enabled)
 
 Input the URL-encoded path to get a raw text breakdown:
 ```sh
 echo -e "/http%3A%2F%2Fwww.wikidata.org%2Fentity%2FQ257469\n" | nc localhost 1900
 ```
 
+### 5. NPS (Port 1915, Nex must be enabled)
+
+The following opens a temporary file in your default editor (specified by the `$EDITOR` environment variable): enter your entity URI and save, and it will be sent to the NPS server.
+```sh
+T=`mktemp` && $EDITOR $T && echo "." >> $T && nc localhost 1915 < $T
+```
+
 ## TODO
 Lots and lots, but mainly:
-* Allow selective enabling of protocols that a server instance should support.
 * Move to RDF support via Sophia and access existing triple stores.
-* SPARQL API? Only if it can respect the basic principles of the Small Web.
+* SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web.
+* Gemtext: support for quads, blank node expansion, RDF-star.
+* Gemtext: context-sensitive links in Gemtext: make them spartan:// or gemini:// depending on the client request.
+* Gemtext: where possible, add support for language-specific labels per client request (we don't have the luxury of an Accept-Language header here).
+* Not every Linked Data server offers Turtle: support negotiation of at least RDF/XML, too.
 * Investigate whether it's worth supporting good old Gopher, too.
-* Where possible, add support for language-specific labels in the Gemtext RDF serialization (we don't have the luxury of an `Accept-Language` header here).
 * Consider Chaykin extensions to existing Small Web servers in Rust, like Agate.
 
 => https://docs.rs/sophia/ Sophia, a Rust crate for RDF
@@ -164,6 +145,9 @@ Lots and lots, but mainly:
 
 ## Rights
 
-This is free software; see LICENSE.
+Copyright (c) 2023-2026 Alessandro Adamou.
 
-=> LICENSE LICENSE
+Chaykin is licensed under either of Apache License, Version 2.0 or MIT license at your option.
+
+=> LICENSE-APACHE Apache License, Version 2.0
+=> LICENSE-MIT MIT license

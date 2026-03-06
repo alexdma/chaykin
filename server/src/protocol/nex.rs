@@ -16,6 +16,7 @@ pub async fn handle_connection(
     store: Arc<Store>,
     http_client: Arc<reqwest::Client>,
     hostname: Arc<String>,
+    lang: Arc<Option<String>>,
 ) -> Result<()> {
     println!("Accepted Nex connection from {}", peer_addr);
     stream.set_nodelay(true)?;
@@ -60,9 +61,9 @@ pub async fn handle_connection(
     match resource_data {
         ResourceData::Description(properties) => {
             let body = if is_proxy {
-                gemtext::generate_proxy_response(&path, &properties, false, &hostname)
+                gemtext::generate_proxy_response(&path, &properties, false, &hostname, &lang)
             } else {
-                gemtext::generate_resource_response(&path, &properties, false, &hostname)
+                gemtext::generate_resource_response(&path, &properties, false, &hostname, &lang)
             };
             // Nex responses lack headers, just send body
             stream.write_all(body.as_bytes()).await?;

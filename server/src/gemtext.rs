@@ -21,6 +21,46 @@ pub fn shorten_uri(uri: &str) -> String {
     uri.to_string()
 }
 
+/// Filter properties by preferred language.
+///
+/// For each predicate that has `LanguageTaggedLiteral` values, if the preferred
+/// language matches one of them, only that value is kept. Non-language-tagged
+/// values and non-literal nodes are always preserved.
+fn filter_by_language(properties: &[(String, RdfNode)], lang: &Option<String>) -> Vec<(String, RdfNode)> {
+    let preferred = match lang {
+        Some(l) => l,
+        None => return properties.to_vec(),
+    };
+
+    use std::collections::HashMap;
+
+    // Group language-tagged literals by predicate
+    let mut lang_tags_by_pred: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (predicate, object) in properties {
+        if let RdfNode::LanguageTaggedLiteral(_, l) = object {
+            lang_tags_by_pred.entry(predicate.as_str())
+                .or_insert_with(Vec::new)
+                .push(l.as_str());
+        }
+    }
+
+    properties.iter().filter(|(predicate, object)| {
+        match object {
+            RdfNode::LanguageTaggedLiteral(_, l) => {
+                let tags = lang_tags_by_pred.get(predicate.as_str());
+                match tags {
+                    Some(available) if available.contains(&preferred.as_str()) => {
+                        // This predicate has the preferred language — keep only that one
+                        l == preferred
+                    },
+                    _ => true, // Preferred lang not available for this predicate, keep all
+                }
+            },
+            _ => true, // Non-language-tagged nodes always kept
+        }
+    }).cloned().collect()
+}
+
 /// Generate a Gemtext response for a resource with its properties
 /// 
 /// When `condensed` is true, properties are grouped together with all their objects
@@ -29,14 +69,16 @@ pub fn generate_resource_response(
     resource_iri: &str, 
     properties: &[(String, RdfNode)],
     condensed: bool,
-    hostname: &str
+    hostname: &str,
+    lang: &Option<String>,
 ) -> String {
+    let filtered = filter_by_language(properties, lang);
     let mut body = format!("# Resource: {}\n\n", shorten_uri(resource_iri));
     
     let formatted = if condensed {
-        format_properties_condensed(properties)
+        format_properties_condensed(&filtered)
     } else {
-        format_properties_expanded(properties)
+        format_properties_expanded(&filtered)
     };
     body.push_str(&formatted);
     
@@ -145,14 +187,16 @@ pub fn generate_proxy_response(
     original_url: &str, 
     properties: &[(String, RdfNode)],
     condensed: bool,
-    hostname: &str
+    hostname: &str,
+    lang: &Option<String>,
 ) -> String {
+    let filtered = filter_by_language(properties, lang);
     let mut body = format!("# Proxy: {}\n\n", shorten_uri(original_url));
     
     let formatted = if condensed {
-        format_proxy_properties_condensed(properties, hostname)
+        format_proxy_properties_condensed(&filtered, hostname)
     } else {
-        format_proxy_properties_expanded(properties, hostname)
+        format_proxy_properties_expanded(&filtered, hostname)
     };
     body.push_str(&formatted);
     

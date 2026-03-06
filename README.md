@@ -7,10 +7,10 @@ A Linked Data server in Rust that makes the Semantic Web available over the Smal
 - [Nex](https://nightfall.city/nex/info/)
 - [NPS](https://nightfall.city/nps/info/) (to send data to Nex)
 
-More on this in [docs/info.md](docs/info.md).
+More on this in [docs/about.md](docs/about.md).
 
 ## Features
-- **Multi-Protocol Server**: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex/NPS TCP listeners.
+- **Multi-Protocol Server**: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex/NPS TCP listeners. Enabled protocols and ports can be configured.
 - **Linked Data Store**: Consumes RDF data in Turtle via `rio_turtle` and holds them into an in-memory store.
 - **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph.  A condensed syntax, which groups predicates by property, is also supported. The specification is documented at [docs/rdf_gemtext_spec.md](docs/rdf_gemtext_spec.md).
 - **External Proxy**: Acts as a browser for all the Linked Open Data out there.
@@ -22,7 +22,7 @@ More on this in [docs/info.md](docs/info.md).
 
 ## Setup & Running
 Pretty standard stuff:
-1. **Dependencies**: `tokio`, `rustls`, `rcgen`, `rio_turtle`, `rio_api`, `reqwest`, `percent-encoding`.
+1. **Dependencies**: Mainly `tokio`, `rustls`, `rio_turtle`, `rio_api`, and `reqwest`.
 2. **Build**:
    ```bash
    cd server
@@ -39,11 +39,11 @@ Pretty standard stuff:
    ```bash
    cargo run
    ```
-   The server listens on `127.0.0.1:1965` by default (for Gemini/Titan). Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish but without support for Titan) or [Alhena](https://metaloupe.com/alhena/alhena.html) (not as fancy, but flexible and multi-protocol).
+   The server listens on `127.0.0.1:1965` by default (for Gemini/Titan). Go there with your favourite Gemini client, like [Lagrange](https://gmi.skyjake.fi/lagrange/) (simple, stylish, with support for Spartan but not Titan) or [Alhena](https://metaloupe.com/alhena/alhena.html) (not as fancy, but flexible and multi-protocol).
 
    To run it in a Docker container (mapping the Spartan port to one that doesn't require a super user):
    ```bash
-   docker run -p 1965:1965 -p 3300:300 -p 1900:1900 chaykin
+   docker run -p 1965:1965 -p 3300:300 -p 1900:1900 -p 1915:1915 chaykin
    ```
 
 ### Configuration
@@ -56,12 +56,17 @@ cargo run -- --help
 
 Arguments:
 - `--host`: IP address to bind to (default: 127.0.0.1)
-- `--port`: Port number for Gemini/Titan to bind to (default: 1965)
+- `--gemini-port`: Port number for Gemini/Titan to bind to (default: 1965)
 - `--spartan-port`: Port number for Spartan (default: 300)
 - `--nex-port`: Port number for Nex (default: 1900)
-- `--file`: Path to the RDF data file (default: sample_data.ttl)
+- `--nps-port`: Port number for NPS (default: 1915)
+- `--protocols`: Comma-separated list of enabled protocols. Run `cargo run -- list-protocols` to see the list (default: all)
+- `--disable-titan`: Disable Titan (assumes Gemini is enabled)
+- `--disable-nps`: Disable NPS (assumes Nex is enabled)
+- `--file`: Path to an initial RDF data file (default: sample_data.ttl)
 - `--cert`: Path to TLS certificate (PEM)
 - `--key`: Path to TLS private key (PEM)
+- `--lang`: Preferred language for language-tagged literals in Gemtext (e.g. en, fr, de)
 
 If no certificate/key is provided, a self-signed certificate is generated for development.
 
@@ -108,7 +113,7 @@ T=`mktemp` && $EDITOR $T && echo "." >> $T && nc localhost 1915 < $T
 ## TODO
 Lots and lots, but mainly:
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
-- SPARQL API? Only if it can respect the basic principles of the Small Web.
+- SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web.
 - Gemtext serialization improvements:
     - Support for quads, blank node expansion, RDF-star.
     - Context-sensitive links in Gemtext: make them `spartan://` or `gemini://` depending on the client request.
@@ -118,4 +123,10 @@ Lots and lots, but mainly:
 - Consider Chaykin extensions to existing Small Web servers in Rust, like [Agate](https://github.com/mbrubeck/agate).
 
 ## Rights
-This is free software; see [LICENSE](LICENSE).
+Copyright (c) 2023-2026 Alessandro Adamou.
+
+Chaykin is licensed under either of:
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.

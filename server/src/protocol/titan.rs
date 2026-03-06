@@ -14,6 +14,7 @@ pub async fn handle_connection(
     store: Arc<Store>,
     http_client: Arc<reqwest::Client>,
     hostname: Arc<String>,
+    lang: Arc<Option<String>>,
 ) -> Result<()> {
     println!("Titan Request Line: {}", request_line);
 
@@ -66,9 +67,9 @@ pub async fn handle_connection(
     match resource_data {
         ResourceData::Description(properties) => {
             let body = if is_proxy {
-                gemtext::generate_proxy_response(&path, &properties, false, &hostname)
+                gemtext::generate_proxy_response(&path, &properties, false, &hostname, &lang)
             } else {
-                gemtext::generate_resource_response(&path, &properties, false, &hostname)
+                gemtext::generate_resource_response(&path, &properties, false, &hostname, &lang)
             };
             let response = gemtext::format_gemini_response(&body);
             stream.write_all(response.as_bytes()).await?;
