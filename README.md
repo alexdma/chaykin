@@ -22,7 +22,7 @@ More on this in [docs/about.md](docs/about.md).
 
 ## Setup & Running
 Pretty standard stuff:
-1. **Dependencies**: Mainly `tokio`, `rustls`, `rio_turtle`, `rio_api`, and `reqwest`.
+1. **Dependencies**: Rust/Cargo>1.78; Mainly `tokio`, `rustls`, `rio_turtle`, `rio_api`, and `reqwest`.
 2. **Build**:
    ```bash
    cd server

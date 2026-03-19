@@ -28,7 +28,7 @@ More on this in docs/about.gmi
 
 Pretty standard stuff:
 
-1. Dependencies: Mainly tokio, rustls, rcgen, rio_turtle, rio_api, and reqwest.
+1. Dependencies: Rust/Cargo>1.78; Mainly tokio, rustls, rcgen, rio_turtle, rio_api, and reqwest.
 2. Build:
 
 ```sh
