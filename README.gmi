@@ -13,22 +13,22 @@ More on this in docs/about.gmi
 ## Features
 
 * Multi-Protocol Server: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex/NPS TCP listeners. Enabled protocols and ports can be configured.
-* Linked Data Store: Consumes RDF data in Turtle via rio_turtle and holds them into an in-memory store.
+* Linked Data Store: Consumes RDF data in Turtle or RDF/XML via rio and holds them into an in-memory store.
 * Gemtext Mapping: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph. A condensed syntax, which groups predicates by property, is also supported. The specification is documented in the `docs` directory.
 * External Proxy: Acts as a browser for all the Linked Open Data out there.
 
 ### External Proxy Features
-  * Encoded URLs in the request path are fetched via reqwest.
-  * Accept: text/turtle is used for Content Negotiation.
-  * Fetched RDF is parsed and rendered.
-  * Links to other external resources are re-encoded to point back to the proxy.
-  * You can provide a custom TLS certificate via the --cert flag.
+* Encoded URLs in the request path are fetched via reqwest.
+* Accept: text/turtle is used for Content Negotiation.
+* Fetched RDF is parsed and rendered.
+* Links to other external resources are re-encoded to point back to the proxy.
+* You can provide a custom TLS certificate via the --cert flag.
 
 ## Setup & Running
 
 Pretty standard stuff:
 
-1. Dependencies: Rust/Cargo>1.78; Mainly tokio, rustls, rcgen, rio_turtle, rio_api, and reqwest.
+1. Dependencies: Rust/Cargo>1.78; Mainly tokio, rustls, rcgen, rio_turtle, rio_xml, rio_api, and reqwest.
 2. Build:
 
 ```sh
@@ -51,7 +51,7 @@ cargo run
 ```
 
 The server listens on `127.0.0.1:1965` by default (for Gemini/Titan). Go there with your favourite Gemini client, like
-=> gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish, with support for Spartan but not Titan)
+=> gemini://skyjake.fi/lagrange/ Lagrange (simple, stylish, with support for Spartan and, recently, for Titan as well)
 => http://metaloupe.com/alhena/alhena.html Alhena (not as fancy, but flexible and multi-protocol) [http]
 
 To run it in a Docker container (mapping the Spartan port to one that doesn't require a super user):
@@ -132,10 +132,10 @@ T=`mktemp` && $EDITOR $T && echo "." >> $T && nc localhost 1915 < $T
 Lots and lots, but mainly:
 * Move to RDF support via Sophia and access existing triple stores.
 * SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web.
-* Gemtext: support for quads, blank node expansion, RDF-star.
+* Gemtext: also render statements for subjects other than the one in the request URI.
 * Gemtext: context-sensitive links in Gemtext: make them spartan:// or gemini:// depending on the client request.
-* Gemtext: where possible, add support for language-specific labels per client request (we don't have the luxury of an Accept-Language header here).
-* Not every Linked Data server offers Turtle: support negotiation of at least RDF/XML, too.
+* Gemtext: where possible, add support for language-specific labels per client request (we don't have the luxury of an Accept-Language header here, though there is a "lang" parameter in Gemini).
+* Gemtext: support for quads, blank node expansion, RDF-star.
 * Investigate whether it's worth supporting good old Gopher, too.
 * Consider Chaykin extensions to existing Small Web servers in Rust, like Agate.
 

@@ -5,26 +5,7 @@ use rio_turtle::{TurtleParser, TurtleError};
 use rio_api::parser::TriplesParser;
 use rio_api::model::{Subject, Term};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum RdfNode {
-    Iri(String),
-    BlankNode(String),
-    SimpleLiteral(String),
-    LanguageTaggedLiteral(String, String),
-    DatatypedLiteral(String, String),
-}
-
-impl std::fmt::Display for RdfNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RdfNode::Iri(iri) => write!(f, "{}", iri),
-            RdfNode::BlankNode(id) => write!(f, "_:{}", id),
-            RdfNode::SimpleLiteral(v) => write!(f, "\"{}\"", v),
-            RdfNode::LanguageTaggedLiteral(v, l) => write!(f, "\"{}\"@{}", v, l),
-            RdfNode::DatatypedLiteral(v, dt) => write!(f, "\"{}\"^^<{}>", v, dt),
-        }
-    }
-}
+pub use gemtext_rdf::RdfNode;
 
 pub struct Store {
     triples: Vec<(String, String, RdfNode)>,
@@ -43,22 +24,18 @@ impl Store {
     }
 
     pub fn load_from_string(&mut self, content: &str) -> Result<()> {
-        let mut parser = TurtleParser::new(content.as_bytes(), None);
-        
         let mut triples = Vec::new();
         
-        parser.parse_all(&mut |t| {
-            // Convert Subject to String
+        let mut parser = TurtleParser::new(content.as_bytes(), None);
+        let turtle_result = parser.parse_all(&mut |t| {
             let s = match t.subject {
                 Subject::NamedNode(n) => n.iri.to_string(),
                 Subject::BlankNode(b) => b.id.to_string(),
                 Subject::Triple(_) => "triple".to_string(),
             };
              
-            // Convert Predicate to String
             let p = t.predicate.iri.to_string();
 
-            // Convert Object to RdfNode
             let o = match t.object {
                 Term::NamedNode(n) => RdfNode::Iri(n.iri.to_string()),
                 Term::BlankNode(b) => RdfNode::BlankNode(b.id.to_string()),
@@ -72,7 +49,36 @@ impl Store {
             
             triples.push((s, p, o));
             Ok(()) as Result<(), TurtleError>
-        }).context("Failed to parse turtle")?;
+        });
+
+        if let Err(turtle_err) = turtle_result {
+            // Turtle parsing failed, clear any partial results and try RDF/XML
+            triples.clear();
+            let mut xml_parser = rio_xml::RdfXmlParser::new(content.as_bytes(), None);
+            xml_parser.parse_all(&mut |t| {
+                let s = match t.subject {
+                    Subject::NamedNode(n) => n.iri.to_string(),
+                    Subject::BlankNode(b) => b.id.to_string(),
+                    Subject::Triple(_) => "triple".to_string(),
+                };
+                 
+                let p = t.predicate.iri.to_string();
+    
+                let o = match t.object {
+                    Term::NamedNode(n) => RdfNode::Iri(n.iri.to_string()),
+                    Term::BlankNode(b) => RdfNode::BlankNode(b.id.to_string()),
+                    Term::Literal(l) => match l {
+                        rio_api::model::Literal::Simple { value } => RdfNode::SimpleLiteral(value.to_string()),
+                        rio_api::model::Literal::LanguageTaggedString { value, language } => RdfNode::LanguageTaggedLiteral(value.to_string(), language.to_string()),
+                        rio_api::model::Literal::Typed { value, datatype } => RdfNode::DatatypedLiteral(value.to_string(), datatype.iri.to_string()),
+                    }, 
+                    Term::Triple(_) => RdfNode::SimpleLiteral("triple".to_string()),
+                };
+                
+                triples.push((s, p, o));
+                Ok(()) as Result<(), rio_xml::RdfXmlError>
+            }).context(format!("Failed to parse as Turtle ({}) and fallback to RDF/XML also failed", turtle_err))?;
+        }
 
         self.triples.extend(triples);
         Ok(())
