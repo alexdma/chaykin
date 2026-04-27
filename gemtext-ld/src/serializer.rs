@@ -2,6 +2,16 @@ use std::collections::HashMap;
 use crate::model::{RdfNode, RdfTriple};
 use crate::prefixes::shorten_uri;
 
+/// Escape a literal value for safe embedding in a single Gemtext line.
+///
+/// The line-oriented format cannot represent raw newlines or carriage returns
+/// inside a quoted value. Backslashes are escaped first to avoid ambiguity.
+fn escape_literal(v: &str) -> String {
+    v.replace('\\', "\\\\")
+     .replace('\n', "\\n")
+     .replace('\r', "\\r")
+}
+
 /// Serialization mode for RDF-to-Gemtext output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SerializationMode {
@@ -118,10 +128,10 @@ fn format_properties_expanded(properties: &[(String, RdfNode)]) -> String {
                 output.push_str(&format!("* {}: _:{}\n", short_pred, id));
             }
             RdfNode::SimpleLiteral(v) => {
-                output.push_str(&format!("* {}: \"{}\"\n", short_pred, v));
+                output.push_str(&format!("* {}: \"{}\"\n", short_pred, escape_literal(v)));
             }
             RdfNode::LanguageTaggedLiteral(v, l) => {
-                output.push_str(&format!("* {}: \"{}\"@{}\n", short_pred, v, l));
+                output.push_str(&format!("* {}: \"{}\"@{}\n", short_pred, escape_literal(v), l));
             }
             RdfNode::DatatypedLiteral(v, dt) => {
                 if dt.starts_with("gemini://") || dt.starts_with("http") {
@@ -129,14 +139,14 @@ fn format_properties_expanded(properties: &[(String, RdfNode)]) -> String {
                         "=> {} {} : \"{}\"^^{}\n",
                         dt,
                         short_pred,
-                        v,
+                        escape_literal(v),
                         shorten_uri(dt)
                     ));
                 } else {
                     output.push_str(&format!(
                         "* {}: \"{}\"^^{}\n",
                         short_pred,
-                        v,
+                        escape_literal(v),
                         shorten_uri(dt)
                     ));
                 }
@@ -191,23 +201,23 @@ fn format_properties_condensed(properties: &[(String, RdfNode)]) -> String {
                         output.push_str(&format!("* _:{}\n", id));
                     }
                     RdfNode::SimpleLiteral(v) => {
-                        output.push_str(&format!("* \"{}\"\n", v));
+                        output.push_str(&format!("* \"{}\"\n", escape_literal(v)));
                     }
                     RdfNode::LanguageTaggedLiteral(v, l) => {
-                        output.push_str(&format!("* \"{}\"@{}\n", v, l));
+                        output.push_str(&format!("* \"{}\"@{}\n", escape_literal(v), l));
                     }
                     RdfNode::DatatypedLiteral(v, dt) => {
                         if dt.starts_with("gemini://") || dt.starts_with("http") {
                             output.push_str(&format!(
                                 "=> {} \"{}\"^^{}\n",
                                 dt,
-                                v,
+                                escape_literal(v),
                                 shorten_uri(dt)
                             ));
                         } else {
                             output.push_str(&format!(
                                 "* \"{}\"^^{}\n",
-                                v,
+                                escape_literal(v),
                                 shorten_uri(dt)
                             ));
                         }

@@ -11,7 +11,7 @@
 //! # Example
 //!
 //! ```
-//! use gemtext_rdf::{RdfNode, RdfTriple, SerializationMode, serialize, parse};
+//! use gemtext_ld::{RdfNode, RdfTriple, SerializationMode, serialize, parse};
 //!
 //! let triples = vec![
 //!     RdfTriple::new(

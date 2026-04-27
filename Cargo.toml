@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "gemtext-rdf",
+    "gemtext-ld",
     "server",
     "sandbox",
 ]

@@ -1,10 +1,10 @@
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use crate::store::RdfNode;
-use gemtext_rdf::shorten_uri;
+use gemtext_ld::shorten_uri;
 
 /// Generate a Gemtext response for a resource with its properties.
 ///
-/// Delegates RDF serialization to the `gemtext_rdf` library, then appends
+/// Delegates RDF serialization to the `gemtext_ld` library, then appends
 /// the Home link.
 pub fn generate_resource_response(
     resource_iri: &str,
@@ -13,20 +13,20 @@ pub fn generate_resource_response(
     hostname: &str,
     lang: &Option<String>,
 ) -> String {
-    let triples: Vec<gemtext_rdf::RdfTriple> = properties
+    let triples: Vec<gemtext_ld::RdfTriple> = properties
         .iter()
         .map(|(pred, obj)| {
-            gemtext_rdf::RdfTriple::new(resource_iri, pred.clone(), obj.clone())
+            gemtext_ld::RdfTriple::new(resource_iri, pred.clone(), obj.clone())
         })
         .collect();
 
     let mode = if condensed {
-        gemtext_rdf::SerializationMode::Condensed
+        gemtext_ld::SerializationMode::Condensed
     } else {
-        gemtext_rdf::SerializationMode::Expanded
+        gemtext_ld::SerializationMode::Expanded
     };
 
-    let mut body = gemtext_rdf::serialize(&triples, mode, lang);
+    let mut body = gemtext_ld::serialize(&triples, mode, lang);
     body.push_str(&format!("\n=> gemini://{}/ Home\n", hostname));
     body
 }

@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-gemtext-rdf = { path = "../gemtext-rdf" }
+gemtext-ld = { path = "../gemtext-ld" }
 tokio = { version = "1", features = ["full"] }
 rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring"] }

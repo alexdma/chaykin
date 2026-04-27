@@ -144,7 +144,7 @@ dependencies = [
  "anyhow",
  "clap",
  "futures",
- "gemtext-rdf",
+ "gemtext-ld",
  "percent-encoding",
  "rcgen",
  "reqwest",
@@ -393,7 +393,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gemtext-rdf"
+name = "gemtext-ld"
 version = "0.1.0"
 
 [[package]]

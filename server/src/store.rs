@@ -5,7 +5,7 @@ use rio_turtle::{TurtleParser, TurtleError};
 use rio_api::parser::TriplesParser;
 use rio_api::model::{Subject, Term};
 
-pub use gemtext_rdf::RdfNode;
+pub use gemtext_ld::RdfNode;
 
 pub struct Store {
     triples: Vec<(String, String, RdfNode)>,

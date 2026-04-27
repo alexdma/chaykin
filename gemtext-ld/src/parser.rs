@@ -1,6 +1,29 @@
 use crate::model::{RdfNode, RdfTriple};
 use crate::prefixes::expand_uri;
 
+/// Unescape a literal value extracted from a Gemtext line.
+///
+/// Reverses the escaping applied by the serializer: `\\` → `\`, `\n` → newline,
+/// `\r` → carriage return. Unknown escape sequences are passed through unchanged.
+fn unescape_literal(v: &str) -> String {
+    let mut result = String::with_capacity(v.len());
+    let mut chars = v.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('\\') => result.push('\\'),
+                Some('n')  => result.push('\n'),
+                Some('r')  => result.push('\r'),
+                Some(other) => { result.push('\\'); result.push(other); }
+                None => result.push('\\'),
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 /// Parse a Gemtext document back into RDF triples.
 ///
 /// The parser auto-detects expanded vs condensed mode:
@@ -168,7 +191,7 @@ fn parse_object_value(value: &str, link_target: Option<&str>) -> RdfNode {
 
     // Simple literal: "value"
     if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
-        return RdfNode::SimpleLiteral(value[1..value.len() - 1].to_string());
+        return RdfNode::SimpleLiteral(unescape_literal(&value[1..value.len() - 1]));
     }
 
     // Blank node: _:id
@@ -196,7 +219,7 @@ fn parse_datatyped_literal(value: &str) -> Option<RdfNode> {
     if !after_quote.starts_with("^^") {
         return None;
     }
-    let lexical = value[1..close_quote].to_string();
+    let lexical = unescape_literal(&value[1..close_quote]);
     let datatype = expand_uri(after_quote[2..].trim());
     Some(RdfNode::DatatypedLiteral(lexical, datatype))
 }
@@ -211,7 +234,7 @@ fn parse_language_tagged_literal(value: &str) -> Option<RdfNode> {
     if !after_quote.starts_with('@') {
         return None;
     }
-    let lexical = value[1..close_quote].to_string();
+    let lexical = unescape_literal(&value[1..close_quote]);
     let lang = after_quote[1..].trim().to_string();
     if lang.is_empty() {
         return None;
