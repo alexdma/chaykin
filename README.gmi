@@ -133,7 +133,7 @@ Lots and lots, but mainly:
 * SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web.
 * Gemtext: also render statements for subjects other than the one in the request URI.
 * Gemtext: context-sensitive links in Gemtext: make them spartan:// or gemini:// depending on the client request.
-* Gemtext: where possible, add support for language-specific labels per client request (we don't have the luxury of an Accept-Language header here, though there is a "lang" parameter in Gemini).
+* Gemtext: where possible, add support for language-specific labels per client request (we don't have the luxury of an Accept-Language header here: there is a "lang" parameter in Gemini but that is set by the server in the response).
 * Gemtext: support for quads, blank node expansion, RDF-star.
 * Investigate whether it's worth supporting good old Gopher, too. What about Finger?
 * Consider Chaykin extensions to existing Small Web servers in Rust, like Agate.

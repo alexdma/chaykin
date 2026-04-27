@@ -116,7 +116,7 @@ Lots and lots, but mainly:
 - Gemtext serialization improvements:
     - Also render statements for subjects other than the one in the request URI.
     - Context-sensitive links in Gemtext: make them `spartan://` or `gemini://` depending on the client request.
-    - Where possible, add support for language-specific labels per client request (we don't have the luxury of an `Accept-Language` header here, though there is a `lang` parameter in Gemini).
+    - Where possible, add support for language-specific labels per client request (we don't have the luxury of an `Accept-Language` header here: there is a `lang` parameter in Gemini but that is set by the server in the response).
     - Support for quads, blank node expansion, RDF-star.
 - Investigate whether it's worth supporting good old Gopher, too. What about Finger?
 - Consider Chaykin extensions to existing Small Web servers in Rust, like [Agate](https://github.com/mbrubeck/agate).
