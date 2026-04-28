@@ -12,7 +12,7 @@ More on this in [docs/about.md](docs/about.md).
 ## Features
 - **Multi-Protocol Server**: Custom Tokio+Rustls implementation handling Gemini and Titan natively over TLS, alongside plaintext Spartan and Nex/NPS TCP listeners. Enabled protocols and ports can be configured.
 - **Linked Data Store**: Consumes RDF data in Turtle or RDF/XML via `rio` and holds them into an in-memory store.
-- **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph. A condensed syntax, which groups predicates by property, is also supported. The parser and serializer are available as a separate crate at [gemtext-rdf](gemtext-rdf/). The specification is documented at [gemtext-rdf/docs/rdf_gemtext_spec.md](gemtext-rdf/docs/rdf_gemtext_spec.md).
+- **Gemtext Mapping**: A proposed serialization of RDF to the hypertext format of Gemini, offering a recursively browsable knowledge graph. A condensed syntax, which groups predicates by property, is also supported. The parser and serializer are available as a separate crate at [gemtext-ld](gemtext-ld/). The specification is documented at [gemtext-ld/docs/rdf_gemtext_spec.md](gemtext-ld/docs/rdf_gemtext_spec.md).
 - **External Proxy**: Acts as a browser for all the Linked Open Data out there.
     - Encoded URLs in the request path are fetched via `reqwest`.
     - `Accept: text/turtle` is used for Content Negotiation, with fallback to `application/rdf+xml`: this should cover most Linked Data services.
