@@ -112,13 +112,15 @@ T=`mktemp` && $EDITOR $T && echo "." >> $T && nc localhost 1915 < $T
 ## TODO
 Lots and lots, but mainly:
 - Move to RDF support via [Sophia](https://docs.rs/sophia/) and access existing triple stores.
-- SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web.
+- SPARQL API? Only if it can be implemented without compromising the basic principles of the Small Web (we're probably going to need a SPARQL engine that supports cross-protocol equivalence).
 - Gemtext serialization improvements:
     - Also render statements for subjects other than the one in the request URI.
     - Context-sensitive links in Gemtext: make them `spartan://` or `gemini://` depending on the client request.
     - Where possible, add support for language-specific labels per client request (we don't have the luxury of an `Accept-Language` header here: there is a `lang` parameter in Gemini but that is set by the server in the response).
     - Support for quads, blank node expansion, RDF-star.
-- Investigate whether it's worth supporting good old Gopher, too. What about Finger?
+- Investigate whether it's worth supporting other protocols:
+    - Minor [contemporary SmolNet ones](https://dbohdan.com/archive/scorpion/zzo38computer.org/smallweb.txt/): Guppy, Molerat, Scorpion, Scroll etc. The rule of thumb would be that there must be actively developed user-facing clients, such as browsers, supporting that protocol.
+    - Good old ones: Gopher, Finger...
 - Consider Chaykin extensions to existing Small Web servers in Rust, like [Agate](https://github.com/mbrubeck/agate).
 
 ## Rights
