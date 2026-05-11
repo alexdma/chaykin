@@ -1,7 +1,7 @@
 mod store;
 mod gemtext;
 mod protocol;
-use store::Store; // Local RDF store implementation
+use store::{Store, TripleStore}; // Local RDF store implementation
 use std::sync::Arc; // Thread-safe reference counting for shared state
 use tokio::net::TcpListener; // Async TCP listener
 use tokio::task::JoinHandle;

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::store::{Store, RdfNode};
+use crate::store::{Store, TripleStore, RdfNode};
 use anyhow::Result;
 
 pub mod gemini;
