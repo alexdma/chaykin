@@ -1,6 +1,36 @@
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use crate::store::RdfNode;
-use gemtext_ld::shorten_uri;
+use gemtext_ld::{shorten_uri, shorten_uri_condensed};
+
+/// Tracks which condensed-only prefixes (see `gemtext_ld::prefixes::CONDENSED_PREFIXES`)
+/// have been used so far in a document, in first-use order, so they can be
+/// declared in a `# Prefixes` preamble.
+type UsedPrefixes = Vec<(&'static str, &'static str)>;
+
+/// Shorten a URI for Condensed mode, recording any condensed-only prefix it
+/// required so the caller can later render a `# Prefixes` preamble.
+fn shorten_for_condensed(uri: &str, used: &mut UsedPrefixes) -> String {
+    let (short, declared) = shorten_uri_condensed(uri);
+    if let Some(pair) = declared {
+        if !used.contains(&pair) {
+            used.push(pair);
+        }
+    }
+    short
+}
+
+/// Render a `# Prefixes` preamble for any condensed-only prefixes used.
+fn render_prefixes_preamble(used: &UsedPrefixes) -> String {
+    if used.is_empty() {
+        return String::new();
+    }
+    let mut out = String::from("# Prefixes\n");
+    for (namespace, prefix) in used {
+        out.push_str(&format!("* {} {}\n", namespace, prefix));
+    }
+    out.push('\n');
+    out
+}
 
 /// Generate a Gemtext response for a resource with its properties.
 ///
@@ -43,16 +73,23 @@ pub fn generate_proxy_response(
     lang: &Option<String>,
 ) -> String {
     let filtered = filter_by_language(properties, lang);
-    let mut body = format!("# {}\n\n", shorten_uri(original_url));
 
-    let formatted = if condensed {
-        format_proxy_properties_condensed(&filtered, hostname)
-    } else {
-        format_proxy_properties_expanded(&filtered, hostname)
-    };
-    body.push_str(&formatted);
+    if !condensed {
+        let mut body = format!("# {}\n\n", shorten_uri(original_url));
+        body.push_str(&format_proxy_properties_expanded(&filtered, hostname));
+        return body;
+    }
 
-    body
+    let mut used_prefixes: UsedPrefixes = Vec::new();
+    let mut body = format!(
+        "# {}\n\n",
+        shorten_for_condensed(original_url, &mut used_prefixes)
+    );
+    body.push_str(&format_proxy_properties_condensed(&filtered, hostname, &mut used_prefixes));
+
+    let mut output = render_prefixes_preamble(&used_prefixes);
+    output.push_str(&body);
+    output
 }
 
 /// Filter properties by preferred language.
@@ -138,7 +175,11 @@ fn format_proxy_properties_expanded(properties: &[(String, RdfNode)], hostname: 
 }
 
 /// Format proxy properties in condensed form (grouped by predicate)
-fn format_proxy_properties_condensed(properties: &[(String, RdfNode)], hostname: &str) -> String {
+fn format_proxy_properties_condensed(
+    properties: &[(String, RdfNode)],
+    hostname: &str,
+    used: &mut UsedPrefixes,
+) -> String {
     use std::collections::HashMap;
 
     // Group objects by predicate
@@ -155,12 +196,12 @@ fn format_proxy_properties_condensed(properties: &[(String, RdfNode)], hostname:
 
     for predicate in predicates {
         if let Some(objects) = grouped.get(predicate) {
-            output.push_str(&format!("## {}\n", shorten_uri(predicate)));
+            output.push_str(&format!("## {}\n", shorten_for_condensed(predicate, used)));
             if predicate.starts_with("http") {
                 let encoded = utf8_percent_encode(predicate, NON_ALPHANUMERIC).to_string();
-                output.push_str(&format!("=> gemini://{}/{} ↗ {}\n", hostname, encoded, shorten_uri(predicate)));
+                output.push_str(&format!("=> gemini://{}/{} ↗ {}\n", hostname, encoded, shorten_for_condensed(predicate, used)));
             } else if predicate.starts_with("gemini://") {
-                output.push_str(&format!("=> {} ↗ {}\n", predicate, shorten_uri(predicate)));
+                output.push_str(&format!("=> {} ↗ {}\n", predicate, shorten_for_condensed(predicate, used)));
             }
 
             for object in objects {
@@ -168,9 +209,9 @@ fn format_proxy_properties_condensed(properties: &[(String, RdfNode)], hostname:
                     RdfNode::Iri(uri) => {
                         if uri.starts_with("http") {
                             let encoded = utf8_percent_encode(uri, NON_ALPHANUMERIC).to_string();
-                            output.push_str(&format!("=> gemini://{}/{} {}\n", hostname, encoded, shorten_uri(uri)));
+                            output.push_str(&format!("=> gemini://{}/{} {}\n", hostname, encoded, shorten_for_condensed(uri, used)));
                         } else if uri.starts_with("gemini://") {
-                            output.push_str(&format!("=> {} {}\n", uri, shorten_uri(uri)));
+                            output.push_str(&format!("=> {} {}\n", uri, shorten_for_condensed(uri, used)));
                         } else {
                             output.push_str(&format!("* {}\n", uri));
                         }
@@ -187,11 +228,11 @@ fn format_proxy_properties_condensed(properties: &[(String, RdfNode)], hostname:
                     RdfNode::DatatypedLiteral(v, dt) => {
                         if dt.starts_with("http") {
                             let encoded = utf8_percent_encode(dt, NON_ALPHANUMERIC).to_string();
-                            output.push_str(&format!("=> gemini://{}/{} \"{}\"^^{}\n", hostname, encoded, v, shorten_uri(dt)));
+                            output.push_str(&format!("=> gemini://{}/{} \"{}\"^^{}\n", hostname, encoded, v, shorten_for_condensed(dt, used)));
                         } else if dt.starts_with("gemini://") {
-                            output.push_str(&format!("=> {} \"{}\"^^{}\n", dt, v, shorten_uri(dt)));
+                            output.push_str(&format!("=> {} \"{}\"^^{}\n", dt, v, shorten_for_condensed(dt, used)));
                         } else {
-                            output.push_str(&format!("* \"{}\"^^{}\n", v, shorten_uri(dt)));
+                            output.push_str(&format!("* \"{}\"^^{}\n", v, shorten_for_condensed(dt, used)));
                         }
                     }
                 }
@@ -233,4 +274,53 @@ pub fn generate_error_response(title: &str, message: &str) -> String {
 /// Format a complete Gemini response with status code and body
 pub fn format_gemini_response(body: &str) -> String {
     format!("20 text/gemini\r\n{}", body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_proxy_response_condensed_declares_wikidata_prefixes() {
+        let properties = vec![(
+            "http://www.wikidata.org/prop/direct/P31".to_string(),
+            RdfNode::Iri("http://www.wikidata.org/entity/Q7889".to_string()),
+        )];
+
+        let body = generate_proxy_response(
+            "http://www.wikidata.org/entity/Q257469",
+            &properties,
+            true,
+            "localhost",
+            &None,
+        );
+
+        assert!(body.starts_with("# Prefixes\n"));
+        assert!(body.contains("* http://www.wikidata.org/entity/ wd:\n"));
+        assert!(body.contains("* http://www.wikidata.org/prop/direct/ wdt:\n"));
+        assert!(body.contains("# wd:Q257469\n"));
+        assert!(body.contains("## wdt:P31\n"));
+        assert!(body.contains("wd:Q7889"));
+        // No lingering slash from a wrong `wdp:` match.
+        assert!(!body.contains("wdp:direct"));
+    }
+
+    #[test]
+    fn test_proxy_response_condensed_no_preamble_without_extended_prefixes() {
+        let properties = vec![(
+            "http://schema.org/name".to_string(),
+            RdfNode::SimpleLiteral("Alice".to_string()),
+        )];
+
+        let body = generate_proxy_response(
+            "http://example.org/Alice",
+            &properties,
+            true,
+            "localhost",
+            &None,
+        );
+
+        assert!(!body.contains("# Prefixes"));
+        assert!(body.starts_with("# http://example.org/Alice\n\n"));
+    }
 }

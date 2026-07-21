@@ -71,6 +71,17 @@ Two modes:
 | `owl:` | `http://www.w3.org/2002/07/owl#` |
 | `schema:` | `http://schema.org/` |
 
+These are assumed to be known by every conformant client and are never declared in-document.
+
+**Condensed-mode extended prefixes and the `# Prefixes` preamble**: Condensed mode additionally supports a small table of prefixes for common Linked Data namespaces that are not universally registered (e.g. `wd:` / `wdt:` for Wikidata's `entity/` and `prop/direct/` namespaces). Because a client cannot be assumed to know these ahead of time, any of them actually used in a document MUST be declared in a preamble with level-1 heading `# Prefixes`, placed before the first `# Resource:` heading:
+
+```
+# Prefixes
+* <namespace IRI> <prefix>:
+```
+
+The preamble is a single block for the whole document (not repeated per resource) and is omitted entirely when a document only relies on the registered prefixes above. See [gemtext-ld/docs/rdf_gemtext_spec.md](../gemtext-ld/docs/rdf_gemtext_spec.md) §2.4 for the full rule and grammar.
+
 Link targets (`=>` URLs) always carry the **full IRI**; QName shortening applies to display text only, enabling round-trip parsing.
 
 ---

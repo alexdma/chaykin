@@ -1,6 +1,6 @@
 # RDF-to-Gemtext Serialization Specification
 
-**Version**: 0.2 — 2026-03-21
+**Version**: 0.3 — 2026-07-21
 **Implements**: [gemtext-rdf](file:///Users/adamou/workspaces/smolweb/chaykin/gemtext-rdf/src/lib.rs)
 
 ## 1. Overview
@@ -43,6 +43,9 @@ shorten(URI) :=
         URI unchanged
 ```
 
+> [!NOTE]
+> A **candidate namespace only qualifies if the local part remaining after stripping it contains no unescaped `/`**. Turtle-style prefixed names (`PN_LOCAL`) do not permit a raw `/` in the local part, so shortening against a namespace that would leave one in place produces an invalid QName. Where more than one registered namespace qualifies — e.g. one namespace is itself a prefix of another, such as a hypothetical `.../prop/` alongside `.../prop/direct/` — the **longest (most specific) qualifying namespace** wins. This rule applies identically to the extended prefix table of §2.4.
+
 ### 2.3 Expansion Rule (Parsing)
 
 ```
@@ -55,6 +58,57 @@ expand(URI_or_QName) :=
 
 > [!NOTE]
 > Shortening is applied to display text only. Link targets (`=>` URLs) always use the full IRI. The parser uses the link target (full IRI) when available; QNames in display text are expanded back to full URIs using **expand**.
+
+### 2.4 Condensed-Mode Extended Prefixes and the `# Prefixes` Preamble
+
+The registered prefixes of §2.1 are assumed to be known by every conformant client and are never declared explicitly. **Condensed mode** additionally supports a second, smaller table of prefixes for common Linked Data namespaces that are *not* universally registered:
+
+| Prefix | Namespace IRI |
+|--------|---------------|
+| `wd:` | `http://www.wikidata.org/entity/` |
+| `wdp:` | `http://www.wikidata.org/prop/` |
+| `wdt:` | `http://www.wikidata.org/prop/direct/` |
+
+Note that `wdp:` and `wdt:` overlap (`prop/direct/` is nested under `prop/`); see the longest-match/slash-safety rule in §2.2 and §2.4.1 for how this is resolved.
+
+Because a client cannot be assumed to know these ahead of time, any of them actually used in a Condensed-mode document **must** be declared in a `# Prefixes` preamble, placed before the first `# Resource:` heading:
+
+```
+# Prefixes
+* <namespace IRI> <prefix>:
+* <namespace IRI> <prefix>:
+```
+
+Each line lists one namespace IRI and the prefix (with its trailing `:`) it expands to, space-separated. Prefix declaration lines are not hyperlinks, even when the namespace IRI has an HTTP or Gemini scheme. Only namespaces from the extended table that are actually used in the document are declared — the preamble is omitted entirely when a document only relies on the registered prefixes of §2.1.
+
+#### 2.4.1 Extended Shortening Rule (Serialization, Condensed mode only)
+
+```
+shorten_condensed(URI) :=
+    if shorten(URI) != URI:
+        shorten(URI)                          // registered prefix — never declared
+    else if a namespace N in the extended table is the
+            longest slash-safe match for URI (§2.2 NOTE):
+        replace N with its prefix → QName      // record N for the preamble
+    else:
+        URI unchanged
+```
+
+The longest-match/slash-safety rule of §2.2 matters here in particular: Wikidata's `prop/direct/` namespace (`wdt:`) is itself nested under `prop/` (`wdp:`), so a predicate URI under `prop/direct/` must resolve to `wdt:`, not `wdp:` with a stray `/` left in the local name.
+
+#### 2.4.2 Extended Expansion Rule (Parsing)
+
+A parser reads the `# Prefixes` preamble, if present, into a document-local prefix map before parsing the rest of the document, and expands QNames against it in preference to the registered prefixes:
+
+```
+expand_local(QName_or_URI, declared) :=
+    if QName_or_URI starts with a prefix P declared locally:
+        replace P with declared[P] → full URI
+    else:
+        expand(QName_or_URI)              // fall back to §2.3
+```
+
+A conformant parser is not limited to the extended table of §2.4: any prefix declared in a `# Prefixes` preamble, whatever its origin, must be honoured for the remainder of that document.
 
 ## 3. RDF Node Types
 
@@ -112,6 +166,21 @@ An optional preferred language tag may be provided. When set, for each predicate
 
 ## 5. Document Structure
 
+### 5.0 Optional `# Prefixes` Preamble
+
+When serializing in Condensed mode, if any extended prefix (§2.4) is used anywhere in the document, a `# Prefixes` preamble precedes all subject groups:
+
+```
+# Prefixes
+* <namespace IRI> <prefix>:
+
+# Resource: <shorten_condensed(subject_1)>
+
+<condensed_body>
+```
+
+The preamble is a single block for the whole document — it is not repeated per subject group — and is entirely absent from Expanded mode and from Condensed-mode documents that only use registered prefixes.
+
 ### 5.1 Multi-Subject Document
 
 A document may contain one or more subject groups. Each group begins with a level-1 heading identifying the subject:
@@ -132,19 +201,25 @@ The order of subjects follows their first appearance in the input triple set.
 
 The parser reconstructs `(subject, predicate, object)` triples from a Gemtext document.
 
+### 6.0 Preamble Extraction
+
+Before mode detection, the parser checks whether the document opens with a `# Prefixes` heading (skipping only leading blank lines). If so, it consumes the block of `* <namespace IRI> <prefix>:` lines that follows, up to the next blank line, building the document-local prefix map used by `expand_local()` (§2.4.2). The remainder of the document is then parsed as usual. A document with no such heading yields an empty local map, and `expand_local` behaves exactly like `expand`.
+
 ### 6.1 Mode Detection
 
-The parser **auto-detects** the serialization mode:
+The parser **auto-detects** the serialization mode from the lines that follow the preamble (if any):
 - If any line starts with `## `, the document is parsed as **condensed**.
 - Otherwise, it is parsed as **expanded**.
 
 ### 6.2 Subject Tracking
 
-The current subject is set by `# Resource: <iri>` headings. The IRI is expanded via `expand()`. All subsequent triples belong to this subject until the next subject heading.
+The current subject is set by `# Resource: <iri>` headings. The IRI is expanded via `expand_local()`. All subsequent triples belong to this subject until the next subject heading.
 
-Lines before any subject heading are ignored.
+Lines before any subject heading (other than a leading `# Prefixes` preamble) are ignored.
 
 ### 6.3 Expanded Mode Parsing
+
+> Every `expand(...)` below denotes `expand_local(...)` (§2.4.2, §6.0): registered prefixes plus whatever `# Prefixes` declared for this document.
 
 | Line pattern | Parsed as |
 |--------------|-----------|
@@ -181,7 +256,18 @@ The following grammar describes valid RDF-in-Gemtext documents produced by the s
 ```ebnf
 (* === Top-level document === *)
 
-Document          = { SubjectGroup } ;
+Document          = [ PrefixPreamble ] { SubjectGroup } ;
+
+(* --- Optional preamble (Condensed mode, only when an extended
+       prefix per §2.4 is used) --- *)
+
+PrefixPreamble    = "# Prefixes" LF
+                    { PrefixDecl }
+                    LF ;
+
+PrefixDecl        = "* " URI " " DeclaredPrefix ":" LF ;
+
+DeclaredPrefix    = (* any local prefix name declared by this document *) ;
 
 SubjectGroup      = SubjectHeading LF
                     Body ;
@@ -251,8 +337,14 @@ ShortPredicate    = QName | URI ;
 
 QName             = Prefix ":" LocalName ;
 
-Prefix            = "rdf" | "rdfs" | "xsd" | "dc" | "dcterms"
+Prefix            = RegisteredPrefix | DeclaredPrefix ;
+
+(* Assumed known by every client; never appear in a PrefixDecl. *)
+RegisteredPrefix  = "rdf" | "rdfs" | "xsd" | "dc" | "dcterms"
                   | "foaf" | "owl" | "schema" ;
+
+(* Only valid within a document that declares them via PrefixPreamble
+   (Condensed mode only, §2.4). *)
 
 (* === Terminals === *)
 
@@ -318,6 +410,24 @@ Same triples, condensed:
 * foaf:name: "Bob"
 ```
 
+### 8.4 Condensed Mode with a `# Prefixes` Preamble
+
+Wikidata's `entity/` and `prop/direct/` namespaces (§2.4) are not registered prefixes, so a Condensed-mode document using them must declare them up front. The example below states that entity Q257469 (video game *Another World*) is an instance (`wdt:P31`) of entity Q7889 (video game):
+
+```gemini
+# Prefixes
+* http://www.wikidata.org/entity/ wd:
+* http://www.wikidata.org/prop/direct/ wdt:
+
+# Resource: wd:Q257469
+
+## wdt:P31
+=> http://www.wikidata.org/prop/direct/P31 ↗ wdt:P31
+=> http://www.wikidata.org/entity/Q7889 wd:Q7889
+```
+
+Had the document only used registered prefixes (§2.1), the `# Prefixes` block would be omitted entirely, as in §8.2.
+
 ## 9. Design Rationale
 
 ### 9.1 Datatyped Literals as Links
@@ -328,7 +438,9 @@ This is inspired by the W3C [RDF Plain Literal](https://www.w3.org/TR/rdf-plain-
 
 ### 9.2 QName Shortening
 
-Full namespace URIs are verbose and hurt readability in a text-only protocol. QName shortening uses well-known prefixes to substantially reduce visual noise (e.g., `http://www.w3.org/2001/XMLSchema#dateTime` → `xsd:dateTime`). The prefix table is fixed; dynamic `@prefix` declarations from source Turtle are not propagated.
+Full namespace URIs are verbose and hurt readability in a text-only protocol. QName shortening uses well-known prefixes to substantially reduce visual noise (e.g., `http://www.w3.org/2001/XMLSchema#dateTime` → `xsd:dateTime`). The registered prefix table (§2.1) is fixed and never declared in-document, since every conformant client is assumed to know it already.
+
+Condensed mode relaxes this for a small, separate table of extended prefixes (§2.4) covering common Linked Data namespaces — e.g. Wikidata's `wd:`/`wdt:` — that are frequent enough to be worth shortening but not universal enough to bake into every client. Because a parser cannot be expected to know these ahead of time, any of them a document actually uses must be declared in a `# Prefixes` preamble, restoring losslessness: the mapping travels with the data instead of being assumed. This still falls short of general dynamic `@prefix` propagation from arbitrary source Turtle — only the curated extended table can be serialized this way — but it is enough to keep frequently-traversed datasets (e.g. Wikidata-backed capsules) readable in Condensed mode without inventing per-document prefixes on the fly.
 
 ### 9.3 Property Links in Condensed Mode
 

@@ -1,6 +1,23 @@
 use std::collections::HashMap;
 use crate::model::{RdfNode, RdfTriple};
-use crate::prefixes::shorten_uri;
+use crate::prefixes::{shorten_uri, shorten_uri_condensed};
+
+/// Tracks which condensed-only prefixes (see `prefixes::CONDENSED_PREFIXES`)
+/// have been used so far in a document, in first-use order, so they can be
+/// declared in a `# Prefixes` preamble.
+type UsedPrefixes = Vec<(&'static str, &'static str)>;
+
+/// Shorten a URI for Condensed mode, recording any condensed-only prefix it
+/// required so the caller can later render a `# Prefixes` preamble.
+fn shorten_for_condensed(uri: &str, used: &mut UsedPrefixes) -> String {
+    let (short, declared) = shorten_uri_condensed(uri);
+    if let Some(pair) = declared {
+        if !used.contains(&pair) {
+            used.push(pair);
+        }
+    }
+    short
+}
 
 /// Escape a literal value for safe embedding in a single Gemtext line.
 ///
@@ -48,24 +65,38 @@ pub fn serialize(
             .push((triple.predicate.clone(), triple.object.clone()));
     }
 
-    let mut output = String::new();
+    let mut used_prefixes: UsedPrefixes = Vec::new();
+    let mut body = String::new();
 
     for subject in &subjects_order {
         let properties = by_subject.get(subject).unwrap();
         let filtered = filter_by_language(properties, lang);
 
-        output.push_str(&format!("# Resource: {}\n\n", shorten_uri(subject)));
+        let subject_short = match mode {
+            SerializationMode::Expanded => shorten_uri(subject),
+            SerializationMode::Condensed => shorten_for_condensed(subject, &mut used_prefixes),
+        };
+        body.push_str(&format!("# Resource: {}\n\n", subject_short));
 
         match mode {
             SerializationMode::Expanded => {
-                output.push_str(&format_properties_expanded(&filtered));
+                body.push_str(&format_properties_expanded(&filtered));
             }
             SerializationMode::Condensed => {
-                output.push_str(&format_properties_condensed(&filtered));
+                body.push_str(&format_properties_condensed(&filtered, &mut used_prefixes));
             }
         }
     }
 
+    let mut output = String::new();
+    if !used_prefixes.is_empty() {
+        output.push_str("# Prefixes\n");
+        for (namespace, prefix) in &used_prefixes {
+            output.push_str(&format!("* {} {}\n", namespace, prefix));
+        }
+        output.push('\n');
+    }
+    output.push_str(&body);
     output
 }
 
@@ -158,7 +189,7 @@ fn format_properties_expanded(properties: &[(String, RdfNode)]) -> String {
 }
 
 /// Format properties in condensed form (grouped by predicate).
-fn format_properties_condensed(properties: &[(String, RdfNode)]) -> String {
+fn format_properties_condensed(properties: &[(String, RdfNode)], used: &mut UsedPrefixes) -> String {
     // Group objects by predicate, preserving insertion order
     let mut pred_order: Vec<String> = Vec::new();
     let mut grouped: HashMap<String, Vec<RdfNode>> = HashMap::new();
@@ -178,12 +209,12 @@ fn format_properties_condensed(properties: &[(String, RdfNode)]) -> String {
 
     for predicate in &pred_order {
         if let Some(objects) = grouped.get(predicate) {
-            output.push_str(&format!("## {}\n", shorten_uri(predicate)));
+            output.push_str(&format!("## {}\n", shorten_for_condensed(predicate, used)));
             if predicate.starts_with("gemini://") || predicate.starts_with("http") {
                 output.push_str(&format!(
                     "=> {} ↗ {}\n",
                     predicate,
-                    shorten_uri(predicate)
+                    shorten_for_condensed(predicate, used)
                 ));
             }
 
@@ -192,7 +223,7 @@ fn format_properties_condensed(properties: &[(String, RdfNode)]) -> String {
                     RdfNode::Iri(uri) => {
                         if uri.starts_with("gemini://") || uri.starts_with("http") {
                             output
-                                .push_str(&format!("=> {} {}\n", uri, shorten_uri(uri)));
+                                .push_str(&format!("=> {} {}\n", uri, shorten_for_condensed(uri, used)));
                         } else {
                             output.push_str(&format!("* {}\n", uri));
                         }
@@ -212,13 +243,13 @@ fn format_properties_condensed(properties: &[(String, RdfNode)]) -> String {
                                 "=> {} \"{}\"^^{}\n",
                                 dt,
                                 escape_literal(v),
-                                shorten_uri(dt)
+                                shorten_for_condensed(dt, used)
                             ));
                         } else {
                             output.push_str(&format!(
                                 "* \"{}\"^^{}\n",
                                 escape_literal(v),
-                                shorten_uri(dt)
+                                shorten_for_condensed(dt, used)
                             ));
                         }
                     }

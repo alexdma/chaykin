@@ -33,6 +33,6 @@ pub mod parser;
 
 // Re-exports for convenience
 pub use model::{RdfNode, RdfTriple};
-pub use prefixes::{shorten_uri, expand_uri};
+pub use prefixes::{shorten_uri, expand_uri, shorten_uri_condensed, expand_uri_with};
 pub use serializer::{SerializationMode, serialize};
 pub use parser::parse;

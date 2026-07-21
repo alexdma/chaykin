@@ -1,5 +1,50 @@
+use std::collections::HashMap;
 use crate::model::{RdfNode, RdfTriple};
-use crate::prefixes::expand_uri;
+use crate::prefixes::expand_uri_with;
+
+/// Document-local prefixes declared in a `# Prefixes` preamble, mapping a
+/// prefix (including its trailing `:`) to its full namespace IRI.
+type DeclaredPrefixes = HashMap<String, String>;
+
+/// Expand a QName or URI, preferring document-local prefixes declared in a
+/// `# Prefixes` preamble, then falling back to the registered prefixes.
+fn expand(value: &str, declared: &DeclaredPrefixes) -> String {
+    expand_uri_with(value, declared)
+}
+
+/// Parse a leading `# Prefixes` preamble, if present.
+///
+/// Returns the declared prefix map and the index of the first line after the
+/// preamble (0 if no preamble was found).
+fn parse_prefixes_preamble(lines: &[&str]) -> (DeclaredPrefixes, usize) {
+    let mut declared = DeclaredPrefixes::new();
+
+    let mut i = 0;
+    while i < lines.len() && lines[i].trim().is_empty() {
+        i += 1;
+    }
+    if i >= lines.len() || lines[i].trim() != "# Prefixes" {
+        return (declared, 0);
+    }
+    i += 1;
+
+    while i < lines.len() && !lines[i].trim().is_empty() {
+        if let Some(rest) = lines[i].strip_prefix("* ") {
+            if let Some(sep) = rest.rfind(' ') {
+                let namespace = rest[..sep].trim().to_string();
+                let prefix = rest[sep + 1..].trim().to_string();
+                declared.insert(prefix, namespace);
+            }
+        }
+        i += 1;
+    }
+    // Skip the trailing blank line separating the preamble from the body.
+    if i < lines.len() && lines[i].trim().is_empty() {
+        i += 1;
+    }
+
+    (declared, i)
+}
 
 /// Unescape a literal value extracted from a Gemtext line.
 ///
@@ -35,25 +80,28 @@ fn unescape_literal(v: &str) -> String {
 pub fn parse(input: &str) -> Vec<RdfTriple> {
     let lines: Vec<&str> = input.lines().collect();
 
+    let (declared, body_start) = parse_prefixes_preamble(&lines);
+    let body = &lines[body_start..];
+
     // Auto-detect mode: if any line starts with "## ", it's condensed
-    let is_condensed = lines.iter().any(|l| l.starts_with("## "));
+    let is_condensed = body.iter().any(|l| l.starts_with("## "));
 
     if is_condensed {
-        parse_condensed(&lines)
+        parse_condensed(body, &declared)
     } else {
-        parse_expanded(&lines)
+        parse_expanded(body, &declared)
     }
 }
 
 /// Parse expanded-mode Gemtext into RDF triples.
-fn parse_expanded(lines: &[&str]) -> Vec<RdfTriple> {
+fn parse_expanded(lines: &[&str], declared: &DeclaredPrefixes) -> Vec<RdfTriple> {
     let mut triples = Vec::new();
     let mut current_subject: Option<String> = None;
 
     for line in lines {
         // Subject heading
         if let Some(rest) = line.strip_prefix("# Resource: ") {
-            current_subject = Some(expand_uri(rest.trim()));
+            current_subject = Some(expand(rest.trim(), declared));
             continue;
         }
 
@@ -64,7 +112,7 @@ fn parse_expanded(lines: &[&str]) -> Vec<RdfTriple> {
 
         // Link line: => <target> <predicate> : <value>
         if let Some(rest) = line.strip_prefix("=> ") {
-            if let Some(triple) = parse_expanded_link_line(rest, &subject) {
+            if let Some(triple) = parse_expanded_link_line(rest, &subject, declared) {
                 triples.push(triple);
             }
             continue;
@@ -72,7 +120,7 @@ fn parse_expanded(lines: &[&str]) -> Vec<RdfTriple> {
 
         // Bullet line: * <predicate>: <value>
         if let Some(rest) = line.strip_prefix("* ") {
-            if let Some(triple) = parse_expanded_bullet_line(rest, &subject) {
+            if let Some(triple) = parse_expanded_bullet_line(rest, &subject, declared) {
                 triples.push(triple);
             }
         }
@@ -82,7 +130,7 @@ fn parse_expanded(lines: &[&str]) -> Vec<RdfTriple> {
 }
 
 /// Parse a `=> <target> <predicate> : <value>` link line in expanded mode.
-fn parse_expanded_link_line(rest: &str, subject: &str) -> Option<RdfTriple> {
+fn parse_expanded_link_line(rest: &str, subject: &str, declared: &DeclaredPrefixes) -> Option<RdfTriple> {
     // Format: <target_url> <predicate> : <value>
     // The target URL ends at the first space
     let (target, after_target) = split_first_space(rest)?;
@@ -90,27 +138,27 @@ fn parse_expanded_link_line(rest: &str, subject: &str) -> Option<RdfTriple> {
 
     // Find " : " separator between predicate and value
     let colon_pos = after_target.find(" : ")?;
-    let predicate = expand_uri(after_target[..colon_pos].trim());
+    let predicate = expand(after_target[..colon_pos].trim(), declared);
     let value_str = after_target[colon_pos + 3..].trim();
 
     // Determine the object type from the value string
-    let object = parse_object_value(value_str, Some(target));
+    let object = parse_object_value(value_str, Some(target), declared);
     Some(RdfTriple::new(subject, predicate, object))
 }
 
 /// Parse a `* <predicate>: <value>` bullet line in expanded mode.
-fn parse_expanded_bullet_line(rest: &str, subject: &str) -> Option<RdfTriple> {
+fn parse_expanded_bullet_line(rest: &str, subject: &str, declared: &DeclaredPrefixes) -> Option<RdfTriple> {
     // Format: <predicate>: <value>
     let colon_pos = rest.find(": ")?;
-    let predicate = expand_uri(rest[..colon_pos].trim());
+    let predicate = expand(rest[..colon_pos].trim(), declared);
     let value_str = rest[colon_pos + 2..].trim();
 
-    let object = parse_object_value(value_str, None);
+    let object = parse_object_value(value_str, None, declared);
     Some(RdfTriple::new(subject, predicate, object))
 }
 
 /// Parse condensed-mode Gemtext into RDF triples.
-fn parse_condensed(lines: &[&str]) -> Vec<RdfTriple> {
+fn parse_condensed(lines: &[&str], declared: &DeclaredPrefixes) -> Vec<RdfTriple> {
     let mut triples = Vec::new();
     let mut current_subject: Option<String> = None;
     let mut current_predicate: Option<String> = None;
@@ -118,14 +166,14 @@ fn parse_condensed(lines: &[&str]) -> Vec<RdfTriple> {
     for line in lines {
         // Subject heading
         if let Some(rest) = line.strip_prefix("# Resource: ") {
-            current_subject = Some(expand_uri(rest.trim()));
+            current_subject = Some(expand(rest.trim(), declared));
             current_predicate = None;
             continue;
         }
 
         // Predicate heading
         if let Some(rest) = line.strip_prefix("## ") {
-            current_predicate = Some(expand_uri(rest.trim()));
+            current_predicate = Some(expand(rest.trim(), declared));
             continue;
         }
 
@@ -144,7 +192,7 @@ fn parse_condensed(lines: &[&str]) -> Vec<RdfTriple> {
                 continue;
             }
             // Object link: => <target> <display_text>
-            if let Some(triple) = parse_condensed_link_line(rest, &subject, &predicate) {
+            if let Some(triple) = parse_condensed_link_line(rest, &subject, &predicate, declared) {
                 triples.push(triple);
             }
             continue;
@@ -152,7 +200,7 @@ fn parse_condensed(lines: &[&str]) -> Vec<RdfTriple> {
 
         // Bullet line: * <value>
         if let Some(rest) = line.strip_prefix("* ") {
-            let object = parse_object_value(rest.trim(), None);
+            let object = parse_object_value(rest.trim(), None, declared);
             triples.push(RdfTriple::new(&subject, &predicate, object));
         }
     }
@@ -165,12 +213,13 @@ fn parse_condensed_link_line(
     rest: &str,
     subject: &str,
     predicate: &str,
+    declared: &DeclaredPrefixes,
 ) -> Option<RdfTriple> {
     let (target, display) = split_first_space(rest)?;
     let display = display.trim();
 
     // Check if this is a datatyped literal: display looks like "value"^^type
-    let object = parse_object_value(display, Some(target));
+    let object = parse_object_value(display, Some(target), declared);
     Some(RdfTriple::new(subject, predicate, object))
 }
 
@@ -178,9 +227,9 @@ fn parse_condensed_link_line(
 ///
 /// `link_target` is provided when the value came from a `=> ` link line,
 /// allowing us to use the actual URL rather than the display text for IRIs.
-fn parse_object_value(value: &str, link_target: Option<&str>) -> RdfNode {
+fn parse_object_value(value: &str, link_target: Option<&str>, declared: &DeclaredPrefixes) -> RdfNode {
     // Datatyped literal: "value"^^type
-    if let Some(dt_match) = parse_datatyped_literal(value) {
+    if let Some(dt_match) = parse_datatyped_literal(value, declared) {
         return dt_match;
     }
 
@@ -204,12 +253,12 @@ fn parse_object_value(value: &str, link_target: Option<&str>) -> RdfNode {
         RdfNode::Iri(target.to_string())
     } else {
         // The value might be a shortened URI in a bullet
-        RdfNode::Iri(expand_uri(value))
+        RdfNode::Iri(expand(value, declared))
     }
 }
 
 /// Try to parse `"value"^^type` into a DatatypedLiteral.
-fn parse_datatyped_literal(value: &str) -> Option<RdfNode> {
+fn parse_datatyped_literal(value: &str, declared: &DeclaredPrefixes) -> Option<RdfNode> {
     if !value.starts_with('"') {
         return None;
     }
@@ -220,7 +269,7 @@ fn parse_datatyped_literal(value: &str) -> Option<RdfNode> {
         return None;
     }
     let lexical = unescape_literal(&value[1..close_quote]);
-    let datatype = expand_uri(after_quote[2..].trim());
+    let datatype = expand(after_quote[2..].trim(), declared);
     Some(RdfNode::DatatypedLiteral(lexical, datatype))
 }
 
@@ -571,6 +620,71 @@ mod tests {
         let input = "# Not Found\n\nResource not found in graph:\n=> http://example.org/x\n";
         let triples = parse(input);
         assert!(triples.is_empty());
+    }
+
+    #[test]
+    fn test_parse_prefixes_preamble_condensed() {
+        let input = "# Prefixes\n\
+                      * http://www.wikidata.org/entity/ wd:\n\
+                      * http://www.wikidata.org/prop/direct/ wdt:\n\
+                      \n\
+                      # Resource: wd:Q257469\n\n\
+                      ## wdt:P31\n\
+                      => http://www.wikidata.org/prop/direct/P31 ↗ wdt:P31\n\
+                      => http://www.wikidata.org/entity/Q7889 wd:Q7889\n\n";
+        let triples = parse(input);
+        assert_eq!(triples.len(), 1);
+        assert_eq!(triples[0].subject, "http://www.wikidata.org/entity/Q257469");
+        assert_eq!(triples[0].predicate, "http://www.wikidata.org/prop/direct/P31");
+        assert_eq!(
+            triples[0].object,
+            RdfNode::Iri("http://www.wikidata.org/entity/Q7889".into())
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_condensed_with_declared_prefixes() {
+        let original = vec![
+            RdfTriple::new(
+                "http://www.wikidata.org/entity/Q257469",
+                "http://www.wikidata.org/prop/direct/P31",
+                RdfNode::Iri("http://www.wikidata.org/entity/Q7889".into()),
+            ),
+            RdfTriple::new(
+                "http://www.wikidata.org/entity/Q257469",
+                "http://purl.org/dc/terms/title",
+                RdfNode::LanguageTaggedLiteral("Another World".into(), "en".into()),
+            ),
+        ];
+
+        let gemtext = serialize(&original, SerializationMode::Condensed, &None);
+        assert!(gemtext.starts_with("# Prefixes\n"));
+        assert!(gemtext.contains("* http://www.wikidata.org/entity/ wd:\n"));
+        assert!(gemtext.contains("# Resource: wd:Q257469\n"));
+
+        let parsed = parse(&gemtext);
+        assert_eq!(parsed.len(), original.len());
+        for orig in &original {
+            let found = parsed.iter().any(|p| {
+                p.subject == orig.subject
+                    && p.predicate == orig.predicate
+                    && p.object == orig.object
+            });
+            assert!(found, "Missing triple: {:?}", orig);
+        }
+    }
+
+    #[test]
+    fn test_no_preamble_when_no_condensed_prefixes_used() {
+        let original = vec![RdfTriple::new(
+            "http://example.org/x",
+            "http://xmlns.com/foaf/0.1/name",
+            RdfNode::SimpleLiteral("Alice".into()),
+        )];
+
+        let gemtext = serialize(&original, SerializationMode::Condensed, &None);
+        assert!(!gemtext.contains("# Prefixes"));
+        assert!(gemtext.starts_with("# Resource: http://example.org/x\n\n"));
     }
 
     #[test]
