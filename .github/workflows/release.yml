@@ -65,7 +65,8 @@ jobs:
           mkdir -p "$STAGE"
           cp "target/${{ matrix.target }}/release/${BIN_NAME}${{ matrix.ext }}" "$STAGE/"
           cp LICENSE-MIT LICENSE-APACHE README.md "$STAGE/"
-          ARCHIVE="${BIN_NAME}-${{ matrix.asset }}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          ARCHIVE="${BIN_NAME}-${TAG}-${{ matrix.asset }}"
           if [[ "${{ matrix.os }}" == windows-* ]]; then
             (cd "$STAGE" && 7z a "../${ARCHIVE}.zip" .)
           else
