@@ -53,12 +53,16 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          STAGE="$(mktemp -d)"
+          # A plain relative directory, not mktemp: on Windows, mktemp -d
+          # yields an MSYS-style path (e.g. /tmp/tmp.XXXX) that native tools
+          # like 7z.exe cannot resolve, silently zipping nothing.
+          STAGE="stage"
+          mkdir -p "$STAGE"
           cp "target/${{ matrix.target }}/release/${BIN_NAME}${{ matrix.ext }}" "$STAGE/"
           cp LICENSE-MIT LICENSE-APACHE README.md "$STAGE/"
           ARCHIVE="${BIN_NAME}-${{ matrix.target }}"
           if [[ "${{ matrix.os }}" == windows-* ]]; then
-            7z a "${ARCHIVE}.zip" "$STAGE/*"
+            (cd "$STAGE" && 7z a "../${ARCHIVE}.zip" .)
           else
             tar -czf "${ARCHIVE}.tar.gz" -C "$STAGE" .
           fi
