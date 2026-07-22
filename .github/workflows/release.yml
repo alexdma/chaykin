@@ -1,0 +1,91 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build and attach binaries to (e.g. v0.2.1)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  BIN_NAME: chaykin
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-14
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            ext: ".exe"
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release -p chaykin --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euxo pipefail
+          STAGE="$(mktemp -d)"
+          cp "target/${{ matrix.target }}/release/${BIN_NAME}${{ matrix.ext }}" "$STAGE/"
+          cp LICENSE-MIT LICENSE-APACHE README.md "$STAGE/"
+          ARCHIVE="${BIN_NAME}-${{ matrix.target }}"
+          if [[ "${{ matrix.os }}" == windows-* ]]; then
+            7z a "${ARCHIVE}.zip" "$STAGE/*"
+          else
+            tar -czf "${ARCHIVE}.tar.gz" -C "$STAGE" .
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BIN_NAME }}-${{ matrix.target }}
+          path: |
+            *.tar.gz
+            *.zip
+          if-no-files-found: error
+
+  attach:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Determine tag
+        id: tag
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: dist/*
+          fail_on_unmatched_files: true
